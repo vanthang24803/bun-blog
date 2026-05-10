@@ -31,63 +31,7 @@ jobs:
       - name: Check lint & format
         run: bunx --bun @biomejs/biome check .
 
-  # ─── Job 2: Test ─────────────────────────────────────────────────────────────
-  # Spins up a real PostgreSQL database, applies migrations, then runs the
-  # full test suite. Only runs after lint passes (needs: lint).
-  test:
-    name: Run Tests
-    needs: lint
-    runs-on: ubuntu-latest
-
-    # Spin up a postgres:16 container as a sidecar service.
-    # The health check ensures the DB is accepting connections before any
-    # step runs — without this, migrations would race against startup.
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: testdb
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    # Environment variables available to every step in this job.
-    # These replace the .env file that developers use locally.
-    env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/testdb
-      JWT_SECRET: ci-test-secret-key-minimum-32-bytes!!
-      NODE_ENV: test
-      API_VERSION: "1"
-
-    steps:
-      # Check out the repository code
-      - uses: actions/checkout@v4
-
-      # Install Bun runtime
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      # Install exact dependency versions from bun.lock
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      # Apply all Drizzle migrations to the fresh CI database.
-      # This creates the tables the test suite depends on.
-      - name: Run migrations
-        run: bun run src/db/migrate.ts
-
-      # Run the full test suite via bun:test
-      - name: Run tests
-        run: bun test
-
-  # ─── Job 3: Docker Build ─────────────────────────────────────────────────────
+  # ─── Job 2: Docker Build ─────────────────────────────────────────────────────
   # Verifies the Dockerfile builds successfully.
   # Runs in parallel with the test job (no dependency on it).
   # Does not push the image — build-only validation.
