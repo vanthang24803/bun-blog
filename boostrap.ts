@@ -2,6 +2,7 @@ import figlet from "figlet";
 // @ts-expect-error - Bun can import this as a module
 import standardFont from "figlet/importable-fonts/Standard.js";
 import config from "@/config";
+import { notFoundHandler } from "@/handlers/notfound.handler";
 import router from "@/router/router";
 import { logger } from "@/utils/logger";
 
@@ -12,6 +13,7 @@ Bun.serve({
 	port: config.port,
 	hostname: config.hostname,
 	routes: router,
+	fetch: notFoundHandler,
 });
 
 logger.info(figlet.textSync("Bun!", { font: "Standard" }));
