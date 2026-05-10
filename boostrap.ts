@@ -1,5 +1,5 @@
 import figlet from "figlet";
-// @ts-ignore - Bun can import this as a module
+// @ts-expect-error - Bun can import this as a module
 import standardFont from "figlet/importable-fonts/Standard.js";
 import config from "@/config";
 import router from "@/router/router";
