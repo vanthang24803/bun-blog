@@ -33,7 +33,7 @@ bun install
 
 ### Environment Variables
 
-Create a `.env` file in the project root:
+Create an `apps/api/.env` file:
 
 | Variable | Description |
 |---|---|
@@ -62,6 +62,9 @@ bun run dev
 bun run build
 ./server
 ```
+
+From the repo root, the API commands already run with `--cwd apps/api`, so the
+API must keep its own env file at `apps/api/.env`.
 
 ---
 
@@ -241,7 +244,7 @@ bun run lint
 docker build -t api .
 
 # run container
-docker run -p 8888:8888 --env-file .env api
+docker run -p 8888:8888 --env-file apps/api/.env api
 ```
 
 ---
