@@ -1,0 +1,10 @@
+{
+	"name": "@app/shared",
+	"type": "module",
+	"private": true,
+	"exports": {
+		"./types": "./src/types/index.ts",
+		"./constants": "./src/constants/index.ts",
+		"./schemas/*": "./src/schemas/*.ts"
+	}
+}

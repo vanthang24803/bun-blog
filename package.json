@@ -1,41 +1,32 @@
 {
-	"name": "api",
-	"license": "Apache-2.0",
-	"module": "bootstrap.ts",
-	"type": "module",
+	"name": "app",
 	"private": true,
-	"devDependencies": {
-		"@biomejs/biome": "2.4.15",
-		"@types/bun": "latest",
-		"@types/figlet": "^1.7.0",
-		"drizzle-kit": "^0.31.10"
-	},
+	"workspaces": [
+		"apps/*",
+		"packages/*"
+	],
 	"scripts": {
-		"dev": "bun run --hot bootstrap.ts",
-		"db:generate": "bunx drizzle-kit generate",
-		"db:migrate": "bun run src/db/migrate.ts",
-		"db:push": "bunx drizzle-kit push",
-		"db:studio": "bunx drizzle-kit studio",
+		"dev:api": "bun run --cwd apps/api dev",
+		"dev:fe": "bun run --cwd apps/frontend dev",
+		"dev": "bun run dev:api & bun run dev:fe",
+		"build:api": "bun run --cwd apps/api build",
+		"build:fe": "bun run --cwd apps/frontend build",
+		"preview:fe": "bun run --cwd apps/frontend preview",
+		"db:generate": "bun run --cwd apps/api db:generate",
+		"db:migrate": "bun run --cwd apps/api db:migrate",
+		"db:push": "bun run --cwd apps/api db:push",
+		"db:studio": "bun run --cwd apps/api db:studio",
 		"format": "bunx --bun @biomejs/biome format --write .",
 		"lint": "bunx --bun @biomejs/biome lint --write .",
 		"check": "bunx --bun @biomejs/biome check --write .",
-		"type-check": "bunx tsc --noEmit",
-		"build": "bun build ./bootstrap.ts --compile --outfile server",
-		"test": "bun test tests/",
-		"test:unit": "bun test unit",
-		"test:e2e": "bun test e2e",
-		"test:watch": "bun test --watch tests/"
+		"type-check": "bun run --cwd apps/api type-check",
+		"test": "bun run --cwd apps/api test",
+		"test:unit": "bun run --cwd apps/api test:unit",
+		"test:e2e": "bun run --cwd apps/api test:e2e",
+		"test:watch": "bun run --cwd apps/api test:watch"
 	},
-	"peerDependencies": {
+	"devDependencies": {
+		"@biomejs/biome": "2.4.15",
 		"typescript": "^5"
-	},
-	"dependencies": {
-		"@supabase/supabase-js": "^2.105.4",
-		"drizzle-orm": "^0.45.2",
-		"figlet": "^1.11.0",
-		"jose": "^6.2.3",
-		"pino": "^10.3.1",
-		"pino-pretty": "^13.1.3",
-		"zod": "^4.4.2"
 	}
 }

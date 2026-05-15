@@ -1,12 +1,18 @@
-node_modules
-.git
-.gitignore
-Dockerfile
-.dockerignore
+**/.git
+**/.gitignore
+**/node_modules
+**/dist
+
+# env files — pass secrets via build args or runtime env
+**/.env
+**/.env.*
+!**/.env.example
+
+# tooling / docs not needed in image
 README.md
-.env
-.env.*
-!.env.example
-tests
-biome.json
 CLAUDE.md
+AGENTS.md
+biome.json
+.claude
+.gitnexus
+.github

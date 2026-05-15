@@ -1,26 +1,26 @@
-# use the official Bun image
-FROM oven/bun:1.3-slim as base
+FROM oven/bun:1.3-slim AS base
 WORKDIR /usr/src/app
 
-# install dependencies
+# ── Install: only package manifests + lockfile ──────────────────────────────
 FROM base AS install
 COPY package.json bun.lock ./
+COPY apps/api/package.json         ./apps/api/package.json
+COPY apps/frontend/package.json    ./apps/frontend/package.json
+COPY packages/shared/package.json  ./packages/shared/package.json
 RUN bun install --frozen-lockfile
 
-# build the application into a standalone binary
+# ── Build: compile to a standalone binary ───────────────────────────────────
 FROM install AS build
-COPY . .
-RUN bun run build
+COPY tsconfig.json ./
+COPY apps/api      ./apps/api
+COPY packages/shared ./packages/shared
+RUN bun run build:api
 
-# production image
+# ── Release: minimal image with just the binary + migrations ─────────────────
 FROM base AS release
-# copy the binary from the build stage
-COPY --from=build /usr/src/app/server /usr/src/app/server
-# copy migrations because they are needed at runtime for 'db:migrate' (if you run it via binary)
-# or if the binary needs to read them.
-COPY --from=build /usr/src/app/drizzle /usr/src/app/drizzle
+COPY --from=build /usr/src/app/apps/api/server  ./server
+COPY --from=build /usr/src/app/apps/api/drizzle ./drizzle
 
-# run the app
 USER bun
 EXPOSE 8888/tcp
-ENTRYPOINT [ "./server" ]
+ENTRYPOINT ["./server"]
