@@ -44,7 +44,16 @@ const responseMiddleware =
 					);
 				}
 			} else {
-				throw e;
+				// statement timeout, constraint violation, or any other unhandled error
+				logger.error({ err: e, path }, "Unhandled handler error");
+				return Response.json(
+					{
+						err: 500,
+						message: "Internal server error",
+						metadata: { requestAt, path },
+					},
+					{ status: 500 },
+				);
 			}
 		}
 

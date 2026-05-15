@@ -51,7 +51,7 @@ function onSubmit() {
 
       <div class="text-center space-y-2">
         <div class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-primary mb-2">
-          <span class="text-primary-foreground font-bold text-lg">A</span>
+          <span class="text-primary-foreground font-bold text-lg">M</span>
         </div>
         <h1 class="text-2xl font-bold tracking-tight">Create account</h1>
         <p class="text-sm text-muted-foreground">Get started for free</p>

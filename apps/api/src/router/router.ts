@@ -5,7 +5,10 @@ import loggerMiddleware from "@/middlewares/logger.middleware";
 import responseMiddleware from "@/middlewares/response.middleware";
 import { compose } from "@/utils/compose";
 import { authRouter } from "./auth.router";
+import { categoriesRouter } from "./categories.router";
 import { docsRouter } from "./docs.router";
+import { postsRouter } from "./posts.router";
+import { tagsRouter } from "./tags.router";
 import { usersRouter } from "./users.router";
 
 type MethodMap = Partial<Record<string, Handler>>;
@@ -63,7 +66,15 @@ const router = {
 		"/": { GET: compose(helloWorldHandler, [loggerMiddleware]) },
 		...docsRouter,
 	}),
-	...applyApi(prefixRoutes(apiPrefix, { ...authRouter, ...usersRouter })),
+	...applyApi(
+		prefixRoutes(apiPrefix, {
+			...authRouter,
+			...usersRouter,
+			...categoriesRouter,
+			...tagsRouter,
+			...postsRouter,
+		}),
+	),
 };
 
 export default router;

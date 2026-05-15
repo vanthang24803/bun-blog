@@ -10,6 +10,9 @@ const opts = {
 	max: 1,
 	idle_timeout: 30,
 	ssl: "require",
+	connection: {
+		statement_timeout: 30_000,
+	},
 } as const;
 
 let sqlInstance = createClient();

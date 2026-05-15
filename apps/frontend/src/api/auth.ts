@@ -1,4 +1,4 @@
-import { apiFetch } from "@/lib/api";
+import { apiFetch, apiFetchForm } from "@/lib/api";
 
 export interface LoginBody {
 	email: string;
@@ -18,6 +18,7 @@ export interface AuthTokens {
 }
 
 export interface Profile {
+	id: string;
 	publicId: string;
 	email: string;
 	firstName: string;
@@ -56,4 +57,24 @@ export function refresh(refreshToken: string) {
 
 export function getMe() {
 	return apiFetch<Profile>("/me/profile");
+}
+
+export interface UpdateProfileBody {
+	firstName?: string;
+	lastName?: string;
+	bio?: string;
+	phone?: string;
+}
+
+export function updateMe(body: UpdateProfileBody) {
+	return apiFetch<Profile>("/me/profile/update", {
+		method: "POST",
+		body: JSON.stringify(body),
+	});
+}
+
+export function uploadAvatar(file: File) {
+	const fd = new FormData();
+	fd.append("avatar", file);
+	return apiFetchForm<Profile>("/me/avatar", fd);
 }

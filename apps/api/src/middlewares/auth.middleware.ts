@@ -37,4 +37,27 @@ const authMiddleware =
 		return handler(req);
 	};
 
+// Sets requestUser if a valid Bearer token is present, but never rejects.
+// Use on public routes that have optional auth-dependent behaviour (e.g. mine=1).
+export const optionalAuthMiddleware =
+	(handler: Handler): Handler =>
+	async (req) => {
+		const authHeader = req.headers.get("Authorization");
+		if (authHeader?.startsWith("Bearer ")) {
+			const token = authHeader.slice(7);
+			try {
+				const payload = await verifyToken(token);
+				if (payload.type === "access" && payload.sub) {
+					requestUser.set(req, {
+						userId: String(payload.sub),
+						email: String(payload.email ?? ""),
+					});
+				}
+			} catch {
+				// invalid / expired token — treat as unauthenticated
+			}
+		}
+		return handler(req);
+	};
+
 export default authMiddleware;

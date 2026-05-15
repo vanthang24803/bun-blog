@@ -11,7 +11,7 @@ import { getBody } from "@/middlewares/validate.middleware";
 import { errRes } from "@/utils/response";
 
 function safeProfile(p: typeof profiles.$inferSelect) {
-	const { id: _, passwordHash: __, ...safe } = p;
+	const { passwordHash: _, ...safe } = p;
 	return safe;
 }
 

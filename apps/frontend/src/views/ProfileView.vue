@@ -1,16 +1,23 @@
 <script setup lang="ts">
-import { useMutation, useQuery } from "@tanstack/vue-query";
-import { computed } from "vue";
-import { useRouter } from "vue-router";
-import { getMe, logout } from "@/api/auth";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
+import { computed, ref } from "vue";
+import { getMe, type Profile, uploadAvatar } from "@/api/auth";
+import AppNav from "@/components/AppNav.vue";
+import EditProfileDialog from "@/components/EditProfileDialog.vue";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { useAuthStore } from "@/stores/auth";
+import { toast } from "@/components/ui/sonner";
 
-const router = useRouter();
-const authStore = useAuthStore();
+const queryClient = useQueryClient();
+const avatarInputRef = ref<HTMLInputElement | null>(null);
+const editOpen = ref(false);
+
+function onProfileSaved(updated: Profile) {
+	queryClient.setQueryData(["me"], updated);
+	editOpen.value = false;
+}
 
 const {
 	data: profile,
@@ -21,13 +28,27 @@ const {
 	queryFn: getMe,
 });
 
-const { mutate: doLogout, isPending: isLoggingOut } = useMutation({
-	mutationFn: logout,
-	onSettled() {
-		authStore.clear();
-		router.push("/login");
+const { mutate: doUploadAvatar, isPending: isUploadingAvatar } = useMutation({
+	mutationFn: uploadAvatar,
+	onSuccess(updated) {
+		queryClient.setQueryData(["me"], updated);
+		toast.success("Avatar updated");
+	},
+	onError(err) {
+		toast.error("Failed to update avatar", { description: err.message });
 	},
 });
+
+function onAvatarClick() {
+	avatarInputRef.value?.click();
+}
+
+function onAvatarFileChange(e: Event) {
+	const file = (e.target as HTMLInputElement).files?.[0];
+	if (!file) return;
+	doUploadAvatar(file);
+	(e.target as HTMLInputElement).value = "";
+}
 
 function getFirstCharacter(value: string | null | undefined) {
 	return value?.charAt(0) ?? "";
@@ -62,31 +83,7 @@ const joinedDate = computed(() => {
 
 <template>
   <div class="min-h-screen bg-background">
-    <!-- Top nav -->
-    <header class="border-b border-border bg-card">
-      <div class="max-w-4xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <div class="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
-            <span class="text-primary-foreground font-bold text-sm">A</span>
-          </div>
-          <span class="font-semibold text-sm">App</span>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          :disabled="isLoggingOut"
-          @click="doLogout()"
-        >
-          <svg class="h-4 w-4 mr-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke-linecap="round" stroke-linejoin="round"/>
-            <polyline points="16 17 21 12 16 7" stroke-linecap="round" stroke-linejoin="round"/>
-            <line x1="21" y1="12" x2="9" y2="12" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <span v-if="isLoggingOut">Logging out…</span>
-          <span v-else>Sign out</span>
-        </Button>
-      </div>
-    </header>
+    <AppNav />
 
     <main class="max-w-4xl mx-auto px-4 sm:px-6 py-10 space-y-8">
 
@@ -114,10 +111,37 @@ const joinedDate = computed(() => {
           <CardContent class="px-6 pb-6 -mt-10">
             <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
 
-              <!-- Avatar -->
-              <div class="w-20 h-20 rounded-2xl bg-primary border-4 border-card shadow-sm flex items-center justify-center shrink-0">
+              <!-- Avatar (clickable upload) -->
+              <div
+                class="relative w-20 h-20 rounded-2xl bg-primary border-4 border-card shadow-sm flex items-center justify-center shrink-0 cursor-pointer group"
+                :class="{ 'opacity-70': isUploadingAvatar }"
+                @click="onAvatarClick"
+              >
                 <img v-if="profile.avatar" :src="profile.avatar" :alt="fullName" class="w-full h-full rounded-xl object-cover" />
                 <span v-else class="text-primary-foreground font-bold text-2xl">{{ initials }}</span>
+
+                <div class="absolute inset-0 rounded-xl bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <svg v-if="!isUploadingAvatar" class="h-5 w-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline points="17 8 12 3 7 8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="12" y1="3" x2="12" y2="15" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <svg v-else class="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24" fill="none">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                  </svg>
+                  <span class="text-white text-[10px] mt-1 font-medium">
+                    {{ isUploadingAvatar ? 'Uploading…' : 'Change' }}
+                  </span>
+                </div>
+
+                <input
+                  ref="avatarInputRef"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  class="hidden"
+                  @change="onAvatarFileChange"
+                />
               </div>
 
               <div class="flex items-center gap-2 pb-1">
@@ -128,6 +152,13 @@ const joinedDate = computed(() => {
                   </svg>
                   Joined {{ joinedDate }}
                 </Badge>
+                <Button size="sm" variant="outline" class="text-xs h-7" @click="editOpen = true">
+                  <svg class="h-3.5 w-3.5 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Edit profile
+                </Button>
               </div>
             </div>
 
@@ -138,6 +169,59 @@ const joinedDate = computed(() => {
             </div>
           </CardContent>
         </Card>
+
+        <!-- Quick actions -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <RouterLink to="/me/posts/new" class="group">
+            <Card class="h-full hover:border-primary/50 hover:shadow-md transition-all cursor-pointer">
+              <CardContent class="p-5 flex items-center gap-4">
+                <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+                  <svg class="h-5 w-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 5v14M5 12h14" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <div>
+                  <p class="text-sm font-semibold">New post</p>
+                  <p class="text-xs text-muted-foreground">Write something new</p>
+                </div>
+              </CardContent>
+            </Card>
+          </RouterLink>
+
+          <RouterLink to="/me/posts" class="group">
+            <Card class="h-full hover:border-primary/50 hover:shadow-md transition-all cursor-pointer">
+              <CardContent class="p-5 flex items-center gap-4">
+                <div class="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0 group-hover:bg-muted/80 transition-colors">
+                  <svg class="h-5 w-5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline points="14 2 14 8 20 8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="16" y1="13" x2="8" y2="13" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <div>
+                  <p class="text-sm font-semibold">My posts</p>
+                  <p class="text-xs text-muted-foreground">Manage your writing</p>
+                </div>
+              </CardContent>
+            </Card>
+          </RouterLink>
+
+          <RouterLink to="/me/bookmarks" class="group">
+            <Card class="h-full hover:border-primary/50 hover:shadow-md transition-all cursor-pointer">
+              <CardContent class="p-5 flex items-center gap-4">
+                <div class="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0 group-hover:bg-muted/80 transition-colors">
+                  <svg class="h-5 w-5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <div>
+                  <p class="text-sm font-semibold">Bookmarks</p>
+                  <p class="text-xs text-muted-foreground">Saved articles</p>
+                </div>
+              </CardContent>
+            </Card>
+          </RouterLink>
+        </div>
 
         <!-- Info grid -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -248,4 +332,12 @@ const joinedDate = computed(() => {
       </template>
     </main>
   </div>
+
+  <EditProfileDialog
+    v-if="profile"
+    :open="editOpen"
+    :profile="profile"
+    @close="editOpen = false"
+    @saved="onProfileSaved"
+  />
 </template>

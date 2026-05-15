@@ -15,17 +15,22 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { toast } from "@/components/ui/sonner";
 import { useAuthStore } from "@/stores/auth";
 
 const router = useRouter();
 const authStore = useAuthStore();
 const form = ref({ email: "", password: "" });
 
-const { mutate, isPending, error } = useMutation({
+const { mutate, isPending } = useMutation({
 	mutationFn: login,
 	onSuccess(tokens) {
 		authStore.setTokens(tokens);
-		router.push("/dashboard");
+		toast.success("Signed in successfully", { description: "Welcome back!" });
+		router.push("/me");
+	},
+	onError(err) {
+		toast.error("Sign in failed", { description: err.message });
 	},
 });
 
@@ -40,7 +45,7 @@ function onSubmit() {
 
       <div class="text-center space-y-2">
         <div class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-primary mb-2">
-          <span class="text-primary-foreground font-bold text-lg">A</span>
+          <span class="text-primary-foreground font-bold text-lg">M</span>
         </div>
         <h1 class="text-2xl font-bold tracking-tight">Welcome back</h1>
         <p class="text-sm text-muted-foreground">Sign in to your account</p>
@@ -82,10 +87,6 @@ function onSubmit() {
                 required
               />
             </div>
-
-            <p v-if="error" class="text-xs text-destructive">
-              {{ error.message }}
-            </p>
 
             <Button type="submit" class="w-full" :disabled="isPending">
               <span v-if="isPending" class="flex items-center gap-2">

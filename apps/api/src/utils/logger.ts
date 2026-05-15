@@ -11,21 +11,19 @@ export function formatGmt7Timestamp(date = new Date()) {
 	return shiftedDate.toISOString().replace("Z", GMT7_OFFSET_SUFFIX);
 }
 
-export const logger = pino(
-	{
-		timestamp: () => `,"time":"${formatGmt7Timestamp()}"`,
-		...(isDev
-			? {
-					transport: {
-						target: "pino-pretty",
-						options: {
-							colorize: true,
-							translateTime: false,
-							ignore: "pid,hostname",
-							singleLine: true,
-						},
+export const logger = pino({
+	timestamp: () => `,"time":"${formatGmt7Timestamp()}"`,
+	...(isDev
+		? {
+				transport: {
+					target: "pino-pretty",
+					options: {
+						colorize: true,
+						translateTime: false,
+						ignore: "pid,hostname",
+						singleLine: true,
 					},
-				}
-			: {}),
-	},
-);
+				},
+			}
+		: {}),
+});
