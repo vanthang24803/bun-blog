@@ -97,7 +97,8 @@ describe("POST /auth/register", () => {
 		expect(res.status).toBe(201);
 
 		const { data } = (await res.json()) as ApiResponse<Record<string, unknown>>;
-		expect(data.id).toBeDefined();
+		expect(data.publicId).toBeDefined();
+		expect(data.id).toBeUndefined();
 		expect(data.email).toBe(defaultUser.email);
 		expect(data.firstName).toBe(defaultUser.firstName);
 		expect(data.lastName).toBe(defaultUser.lastName);

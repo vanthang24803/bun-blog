@@ -1,7 +1,7 @@
 {
 	"name": "api",
 	"license": "Apache-2.0",
-	"module": "boostrap.ts",
+	"module": "bootstrap.ts",
 	"type": "module",
 	"private": true,
 	"devDependencies": {
@@ -11,15 +11,19 @@
 		"drizzle-kit": "^0.31.10"
 	},
 	"scripts": {
-		"dev": "bun run --hot boostrap.ts",
+		"dev": "bun run --hot bootstrap.ts",
 		"db:generate": "bunx drizzle-kit generate",
 		"db:migrate": "bun run src/db/migrate.ts",
+		"db:push": "bunx drizzle-kit push",
 		"db:studio": "bunx drizzle-kit studio",
 		"format": "bunx --bun @biomejs/biome format --write .",
 		"lint": "bunx --bun @biomejs/biome lint --write .",
 		"check": "bunx --bun @biomejs/biome check --write .",
-		"build": "bun build ./boostrap.ts --compile --outfile server",
+		"type-check": "bunx tsc --noEmit",
+		"build": "bun build ./bootstrap.ts --compile --outfile server",
 		"test": "bun test tests/",
+		"test:unit": "bun test unit",
+		"test:e2e": "bun test e2e",
 		"test:watch": "bun test --watch tests/"
 	},
 	"peerDependencies": {

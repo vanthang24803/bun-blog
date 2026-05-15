@@ -18,7 +18,7 @@ const ALLOWED_TYPES: Record<string, string> = {
 const MAX_SIZE = 5 * 1024 * 1024;
 
 function safeProfile(p: typeof profiles.$inferSelect) {
-	const { passwordHash: _, ...safe } = p;
+	const { id: _, passwordHash: __, ...safe } = p;
 	return safe;
 }
 

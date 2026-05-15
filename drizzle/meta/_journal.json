@@ -15,6 +15,13 @@
 			"when": 1778433270479,
 			"tag": "0001_nostalgic_vargas",
 			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "7",
+			"when": 1778811943491,
+			"tag": "0002_handy_jane_foster",
+			"breakpoints": true
 		}
 	]
 }

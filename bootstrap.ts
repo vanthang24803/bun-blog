@@ -1,5 +1,4 @@
 import figlet from "figlet";
-// @ts-expect-error - Bun can import this as a module
 import standardFont from "figlet/importable-fonts/Standard.js";
 import config from "@/config";
 import { notFoundHandler } from "@/handlers/notfound.handler";

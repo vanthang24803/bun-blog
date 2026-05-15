@@ -32,7 +32,7 @@ export const register: Handler = async (req) => {
 		.returning();
 
 	if (!profile) return errRes(500, "Failed to create profile");
-	const { passwordHash: _, ...safe } = profile;
+	const { id: _, passwordHash: __, ...safe } = profile;
 	return Response.json(safe, { status: 201 });
 };
 
