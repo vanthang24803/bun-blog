@@ -3,9 +3,12 @@ import type {
 	UpdatePostInput,
 } from "@app/shared/schemas/blog.schema";
 import type { Handler } from "@app/shared/types";
+import { ALLOWED_TYPES, MAX_SIZE } from "@app/shared/constants";
 import { and, eq, inArray, sql } from "drizzle-orm";
+import config from "@/config";
 import { getDb } from "@/db";
 import { bookmarks, postReactions, posts, postTags, tags } from "@/db/schema";
+import { s3 } from "@/lib/s3";
 import { requestUser } from "@/middlewares/auth.middleware";
 import { getBody } from "@/middlewares/validate.middleware";
 import { errRes } from "@/utils/response";
@@ -14,6 +17,34 @@ function parseIntParam(val: string | null, fallback: number): number {
 	const n = Number(val);
 	return Number.isFinite(n) && n > 0 ? n : fallback;
 }
+
+export const uploadPostCover: Handler = async (req) => {
+	const user = requestUser.get(req);
+	if (!user) return errRes(401, "Unauthorized");
+
+	let formData: globalThis.FormData;
+	try {
+		formData = (await req.formData()) as globalThis.FormData;
+	} catch {
+		return errRes(400, "Request must be multipart/form-data");
+	}
+
+	const file = formData.get("cover");
+	if (!file || !(file instanceof File))
+		return errRes(400, "cover field is required");
+
+	const ext = ALLOWED_TYPES[file.type];
+	if (!ext) return errRes(400, "cover must be jpeg, png, webp or gif");
+	if (file.size > MAX_SIZE)
+		return errRes(400, "cover must be smaller than 5 MB");
+
+	const key = `covers/${user.userId}/${crypto.randomUUID()}.${ext}`;
+	await s3.write(key, await file.arrayBuffer(), { type: file.type });
+
+	return Response.json({
+		url: `${config.storageBaseUrl}/${config.s3.bucket}/${key}`,
+	});
+};
 
 export const listPosts: Handler = async (req) => {
 	const db = getDb();
@@ -32,7 +63,7 @@ export const listPosts: Handler = async (req) => {
 	} else {
 		conditions.push(eq(posts.status, "published"));
 	}
-	if (categoryId) conditions.push(eq(posts.categoryId, categoryId));
+	if (categoryId) conditions.push(eq(posts.categoryId, Number(categoryId)));
 
 	let query = db
 		.select()
@@ -45,7 +76,7 @@ export const listPosts: Handler = async (req) => {
 		const postIdsWithTag = db
 			.select({ postId: postTags.postId })
 			.from(postTags)
-			.where(eq(postTags.tagId, tagId));
+			.where(eq(postTags.tagId, Number(tagId)));
 		query = db
 			.select()
 			.from(posts)
@@ -141,8 +172,15 @@ export const updatePost: Handler = async (req) => {
 	const user = requestUser.get(req);
 	if (!user) return errRes(401, "Unauthorized");
 
-	const slug = new URL(req.url).pathname.split("/").pop() ?? "";
-	const [existing] = await db.select().from(posts).where(eq(posts.slug, slug));
+	const publicId = new URL(req.url).pathname.split("/").pop() ?? "";
+	if (!publicId) {
+		return errRes(400, "Invalid post public id");
+	}
+
+	const [existing] = await db
+		.select()
+		.from(posts)
+		.where(eq(posts.publicId, publicId));
 	if (!existing) return errRes(404, "Post not found");
 	if (existing.authorId !== user.userId) return errRes(403, "Forbidden");
 

@@ -13,6 +13,13 @@ Bun.serve({
 	hostname: config.hostname,
 	routes: router,
 	fetch: notFoundHandler,
+	error(err) {
+		logger.error({ err }, "Unhandled server error");
+		return Response.json(
+			{ err: 500, message: "Internal server error" },
+			{ status: 500 },
+		);
+	},
 });
 
 logger.info(figlet.textSync("Bun!", { font: "Standard" }));

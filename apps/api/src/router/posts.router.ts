@@ -19,6 +19,7 @@ import {
 	getPost,
 	listMyBookmarks,
 	listPosts,
+	uploadPostCover,
 	updatePost,
 } from "@/handlers/posts.handler";
 import {
@@ -42,10 +43,15 @@ export const postsRouter = {
 		GET: compose(listPosts, optionalAuthedMw),
 		POST: compose(createPost, [...authedMw, validate(createPostSchema)]),
 	},
+	"/posts/upload-cover": {
+		POST: compose(uploadPostCover, authedMw),
+	},
 	"/posts/:slug": {
 		GET: compose(getPost, optionalAuthedMw),
-		PATCH: compose(updatePost, [...authedMw, validate(updatePostSchema)]),
 		DELETE: compose(deletePost, authedMw),
+	},
+	"/me/posts/:publicId": {
+		PATCH: compose(updatePost, [...authedMw, validate(updatePostSchema)]),
 	},
 
 	// comments
@@ -54,7 +60,7 @@ export const postsRouter = {
 		POST: compose(createComment, [...authedMw, validate(createCommentSchema)]),
 	},
 	"/comments/:id": {
-		PATCH: compose(updateComment, [...authedMw, validate(updateCommentSchema)]),
+		POST: compose(updateComment, [...authedMw, validate(updateCommentSchema)]),
 		DELETE: compose(deleteComment, authedMw),
 	},
 	"/comments/:id/replies": {

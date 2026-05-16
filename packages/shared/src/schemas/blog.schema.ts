@@ -11,8 +11,8 @@ export const createPostSchema = z.object({
 	content: z.string().min(1),
 	excerpt: z.string().optional(),
 	coverImage: z.url("coverImage must be a valid URL").optional(),
-	categoryId: z.uuid().optional(),
-	tagIds: z.array(z.uuid()).optional(),
+	categoryId: z.number().int().positive().optional(),
+	tagIds: z.array(z.number().int().positive()).optional(),
 	status: z.enum(["draft", "published", "archived"]).default("draft"),
 });
 
@@ -23,8 +23,8 @@ export const updatePostSchema = z
 		content: z.string().min(1).optional(),
 		excerpt: z.string().optional(),
 		coverImage: z.url("coverImage must be a valid URL").optional(),
-		categoryId: z.uuid().optional(),
-		tagIds: z.array(z.uuid()).optional(),
+		categoryId: z.number().int().positive().optional(),
+		tagIds: z.array(z.number().int().positive()).optional(),
 		status: z.enum(["draft", "published", "archived"]).optional(),
 	})
 	.refine((d) => Object.values(d).some((v) => v !== undefined), {
@@ -44,7 +44,7 @@ export const createTagSchema = z.object({
 
 export const createCommentSchema = z.object({
 	content: z.string().min(1).max(5000),
-	parentId: z.uuid().optional(),
+	parentId: z.number().int().positive().optional(),
 });
 
 export const updateCommentSchema = z.object({

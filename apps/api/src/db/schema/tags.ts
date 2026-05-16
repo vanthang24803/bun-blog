@@ -1,9 +1,7 @@
-import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { bigserial, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 export const tags = pgTable("tags", {
-	id: uuid("id")
-		.primaryKey()
-		.$defaultFn(() => crypto.randomUUID()),
+	id: bigserial("id", { mode: "number" }).primaryKey(),
 	publicId: uuid("public_id")
 		.notNull()
 		.unique()

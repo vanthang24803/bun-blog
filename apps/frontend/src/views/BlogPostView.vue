@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { computed, onMounted, watch } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import AppNav from "@/components/AppNav.vue";
 import CommentList from "@/components/blog/CommentList.vue";
 import ReactionBar from "@/components/blog/ReactionBar.vue";
+import TableOfContents from "@/components/blog/TableOfContents.vue";
 import TagBadge from "@/components/blog/TagBadge.vue";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { useToc } from "@/composables/useToc";
 import { useBookmarksStore } from "@/stores/bookmarks";
 import { usePostsStore } from "@/stores/posts";
 import { useAuthStore } from "@/stores/auth";
@@ -20,6 +22,8 @@ const authStore = useAuthStore();
 
 const slug = computed(() => String(route.params.slug ?? ""));
 const post = computed(() => postsStore.currentPost);
+const contentRef = ref<HTMLElement | null>(null);
+const { headings, activeId, setup: setupToc, scrollTo } = useToc();
 const isBookmarked = computed(
 	() => post.value && bookmarksStore.isBookmarked(post.value.id),
 );
@@ -38,6 +42,8 @@ async function load() {
 	if (authStore.isLoggedIn) {
 		await bookmarksStore.fetchBookmarks();
 	}
+	await nextTick();
+	setupToc(contentRef.value);
 }
 
 async function toggleBookmark() {
@@ -61,7 +67,7 @@ watch(slug, load);
   <div class="min-h-screen bg-background">
     <AppNav />
 
-    <main class="max-w-4xl mx-auto px-4 sm:px-6 py-10 space-y-8">
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 py-10">
 
       <!-- Back link -->
       <RouterLink to="/blog" class="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
@@ -81,78 +87,97 @@ watch(slug, load);
       </div>
 
       <template v-else-if="post">
-        <!-- Article card -->
-        <Card class="overflow-hidden">
-          <!-- Cover image / gradient -->
-          <div
-            class="h-64 bg-gradient-to-br from-primary/10 via-primary/5 to-background"
-            :style="
-              post.coverImage
-                ? { backgroundImage: `url(${post.coverImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-                : undefined
-            "
-          />
+        <div class="flex gap-10 items-start mt-8">
 
-          <CardContent class="p-8 space-y-8">
-            <!-- Meta -->
-            <div class="space-y-4">
-              <div class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <span class="inline-flex items-center rounded-full border border-border px-2.5 py-0.5 font-medium capitalize">
-                  {{ post.status }}
-                </span>
-                <span>{{ publishedLabel }}</span>
-              </div>
+          <!-- Article + Comments -->
+          <div class="flex-1 min-w-0 space-y-8">
+            <Card class="overflow-hidden">
+              <!-- Cover image / gradient -->
+              <div
+                class="h-64 bg-gradient-to-br from-primary/10 via-primary/5 to-background"
+                :style="
+                  post.coverImage
+                    ? { backgroundImage: `url(${post.coverImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+                    : undefined
+                "
+              />
 
-              <h1 class="text-4xl font-bold tracking-tight">{{ post.title }}</h1>
+              <CardContent class="p-8 space-y-8">
+                <!-- Meta -->
+                <div class="space-y-4">
+                  <div class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span class="inline-flex items-center rounded-full border border-border px-2.5 py-0.5 font-medium capitalize">
+                      {{ post.status }}
+                    </span>
+                    <span>{{ publishedLabel }}</span>
+                  </div>
 
-              <p v-if="post.excerpt" class="text-lg leading-8 text-muted-foreground max-w-3xl">
-                {{ post.excerpt }}
-              </p>
-            </div>
+                  <h1 class="text-4xl font-bold tracking-tight">{{ post.title }}</h1>
 
-            <!-- Tags -->
-            <div v-if="post.tags?.length" class="flex flex-wrap gap-2">
-              <TagBadge v-for="tag in post.tags" :key="tag.id" :label="tag.name" />
-            </div>
+                  <p v-if="post.excerpt" class="text-lg leading-8 text-muted-foreground max-w-3xl">
+                    {{ post.excerpt }}
+                  </p>
+                </div>
 
-            <Separator />
+                <!-- Tags -->
+                <div v-if="post.tags?.length" class="flex flex-wrap gap-2">
+                  <TagBadge v-for="tag in post.tags" :key="tag.id" :label="tag.name" />
+                </div>
 
-            <!-- Content -->
-            <div
-              class="prose-content text-base leading-8 text-foreground/90"
-              v-html="post.content"
+                <Separator />
+
+                <!-- Content -->
+                <div
+                  ref="contentRef"
+                  class="prose-content text-base leading-8 text-foreground/90"
+                  v-html="post.content"
+                />
+
+                <Separator />
+
+                <!-- Actions -->
+                <div class="flex flex-wrap items-center gap-3">
+                  <ReactionBar :post-slug="post.slug" :initial-count="post.reactionCount" />
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    @click="toggleBookmark"
+                  >
+                    <svg
+                      class="h-4 w-4 mr-2"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      :class="{ 'fill-foreground': isBookmarked }"
+                    >
+                      <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    {{ isBookmarked ? "Saved" : "Save to bookmarks" }}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <!-- Comments -->
+            <CommentList :post-slug="post.slug" />
+          </div>
+
+          <!-- TOC Sidebar -->
+          <aside
+            v-if="headings.length"
+            class="hidden lg:block w-52 xl:w-60 shrink-0 sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto"
+          >
+            <TableOfContents
+              :headings="headings"
+              :active-id="activeId"
+              @select="scrollTo"
             />
+          </aside>
 
-            <Separator />
-
-            <!-- Actions -->
-            <div class="flex flex-wrap items-center gap-3">
-              <ReactionBar :post-slug="post.slug" :initial-count="post.reactionCount" />
-
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                @click="toggleBookmark"
-              >
-                <svg
-                  class="h-4 w-4 mr-2"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  :class="{ 'fill-foreground': isBookmarked }"
-                >
-                  <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                {{ isBookmarked ? "Saved" : "Save to bookmarks" }}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <!-- Comments -->
-        <CommentList :post-slug="post.slug" />
+        </div>
       </template>
 
       <!-- Not found -->

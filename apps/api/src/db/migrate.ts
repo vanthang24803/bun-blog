@@ -4,7 +4,6 @@ import postgres from "postgres";
 import config from "@/config";
 
 const client = postgres(config.databaseUrl, {
-	prepare: false,
 	max: 1,
 	idle_timeout: 30,
 	ssl: "require",

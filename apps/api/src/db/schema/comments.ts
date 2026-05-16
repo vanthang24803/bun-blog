@@ -1,25 +1,24 @@
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
-import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { bigint, bigserial, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { posts } from "./posts";
 import { profiles } from "./profiles";
 
 export const comments = pgTable("comments", {
-	id: uuid("id")
-		.primaryKey()
-		.$defaultFn(() => crypto.randomUUID()),
+	id: bigserial("id", { mode: "number" }).primaryKey(),
 	publicId: uuid("public_id")
 		.notNull()
 		.unique()
 		.$defaultFn(() => Bun.randomUUIDv7()),
-	postId: uuid("post_id")
+	postId: bigint("post_id", { mode: "number" })
 		.notNull()
 		.references(() => posts.id, { onDelete: "cascade" }),
-	authorId: uuid("author_id")
+	authorId: bigint("author_id", { mode: "number" })
 		.notNull()
 		.references(() => profiles.id, { onDelete: "cascade" }),
-	parentId: uuid("parent_id").references((): AnyPgColumn => comments.id, {
-		onDelete: "set null",
-	}),
+	parentId: bigint("parent_id", { mode: "number" }).references(
+		(): AnyPgColumn => comments.id,
+		{ onDelete: "set null" },
+	),
 	content: text("content").notNull(),
 	createdAt: timestamp("created_at")
 		.$defaultFn(() => new Date())

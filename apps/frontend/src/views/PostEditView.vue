@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import type { UpdatePostInput } from "@/api/blog.types";
+import type { PostSubmitPayload, UpdatePostInput } from "@/api/blog.types";
 import AppNav from "@/components/AppNav.vue";
 import PostForm from "@/components/blog/PostForm.vue";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,8 +25,13 @@ async function load() {
 	await postsStore.fetchPost(slug.value);
 }
 
-async function handleSubmit(payload: UpdatePostInput) {
-	await postsStore.updatePost(slug.value, payload);
+async function handleSubmit({ payload, coverFile }: PostSubmitPayload) {
+	if (!postsStore.currentPost) return;
+	await postsStore.updatePost(
+		String(postsStore.currentPost.publicId),
+		payload as UpdatePostInput,
+		coverFile,
+	);
 	router.push("/me/posts");
 }
 

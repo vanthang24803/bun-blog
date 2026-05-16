@@ -2,10 +2,19 @@ import type { Handler } from "@app/shared/types";
 import config from "@/config";
 
 const { cors } = config;
+const allowedMethods = Array.from(
+	new Set(
+		cors["Access-Control-Allow-Methods"]
+			.split(",")
+			.map((method) => method.trim().toUpperCase())
+			.filter(Boolean)
+			.concat("PATCH"),
+	),
+).join(", ");
 
 const corsHeaders: Record<string, string> = {
 	"Access-Control-Allow-Origin": cors["Access-Control-Allow-Origin"],
-	"Access-Control-Allow-Methods": cors["Access-Control-Allow-Methods"],
+	"Access-Control-Allow-Methods": allowedMethods,
 	"Access-Control-Allow-Headers": cors["Access-Control-Allow-Headers"],
 };
 

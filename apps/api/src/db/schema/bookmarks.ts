@@ -1,17 +1,15 @@
-import { pgTable, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import { bigint, bigserial, pgTable, timestamp, unique } from "drizzle-orm/pg-core";
 import { posts } from "./posts";
 import { profiles } from "./profiles";
 
 export const bookmarks = pgTable(
 	"bookmarks",
 	{
-		id: uuid("id")
-			.primaryKey()
-			.$defaultFn(() => crypto.randomUUID()),
-		postId: uuid("post_id")
+		id: bigserial("id", { mode: "number" }).primaryKey(),
+		postId: bigint("post_id", { mode: "number" })
 			.notNull()
 			.references(() => posts.id, { onDelete: "cascade" }),
-		profileId: uuid("profile_id")
+		profileId: bigint("profile_id", { mode: "number" })
 			.notNull()
 			.references(() => profiles.id, { onDelete: "cascade" }),
 		createdAt: timestamp("created_at")

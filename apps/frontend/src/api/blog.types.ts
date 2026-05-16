@@ -21,6 +21,11 @@ export type {
 export type PostStatus = "draft" | "published" | "archived";
 export type ReactionType = "like" | "love" | "insightful";
 
+export interface PostSubmitPayload {
+	payload: CreatePostInput | UpdatePostInput;
+	coverFile: File | null;
+}
+
 export interface Category {
 	id: string;
 	publicId: string;
@@ -69,6 +74,10 @@ export interface Comment {
 	content: string;
 	createdAt: string;
 	updatedAt: string;
+	authorFirstName: string | null;
+	authorLastName: string | null;
+	authorAvatar: string | null;
+	authorEmail: string | null;
 }
 
 export interface PostReaction {

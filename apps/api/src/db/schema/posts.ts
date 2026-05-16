@@ -1,4 +1,4 @@
-import { pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { bigint, bigserial, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { categories } from "./categories";
 import { profiles } from "./profiles";
 
@@ -9,19 +9,18 @@ export const postStatusEnum = pgEnum("post_status", [
 ]);
 
 export const posts = pgTable("posts", {
-	id: uuid("id")
-		.primaryKey()
-		.$defaultFn(() => crypto.randomUUID()),
+	id: bigserial("id", { mode: "number" }).primaryKey(),
 	publicId: uuid("public_id")
 		.notNull()
 		.unique()
 		.$defaultFn(() => Bun.randomUUIDv7()),
-	authorId: uuid("author_id")
+	authorId: bigint("author_id", { mode: "number" })
 		.notNull()
 		.references(() => profiles.id, { onDelete: "cascade" }),
-	categoryId: uuid("category_id").references(() => categories.id, {
-		onDelete: "set null",
-	}),
+	categoryId: bigint("category_id", { mode: "number" }).references(
+		() => categories.id,
+		{ onDelete: "set null" },
+	),
 	title: text("title").notNull(),
 	slug: text("slug").notNull().unique(),
 	content: text("content").notNull(),

@@ -22,6 +22,8 @@ export async function signAccessToken(profileId: string, email: string) {
 	return new SignJWT({ email, type: "access" })
 		.setProtectedHeader({ alg: "HS256" })
 		.setSubject(profileId)
+		.setJti(crypto.randomUUID())
+		.setIssuedAt()
 		.setExpirationTime(`${ACCESS_TTL}s`)
 		.sign(secret);
 }

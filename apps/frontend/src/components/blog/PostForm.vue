@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import { listCategories } from "@/api/categories";
 import { listTags } from "@/api/tags";
 import type {
 	Category,
 	CreatePostInput,
+	PostSubmitPayload,
 	Tag,
 	UpdatePostInput,
 } from "@/api/blog.types";
@@ -46,12 +47,16 @@ const props = withDefaults(
 );
 
 const emit = defineEmits<{
-	submit: [value: CreatePostInput | UpdatePostInput];
+	submit: [value: PostSubmitPayload];
 }>();
 
 const categories = ref<Category[]>([]);
 const tags = ref<Tag[]>([]);
 const slugTouched = ref(Boolean(props.initialValues?.slug));
+const coverInputRef = ref<HTMLInputElement | null>(null);
+const coverFile = ref<File | null>(null);
+const coverPreviewUrl = ref("");
+const isDraggingCover = ref(false);
 
 const form = reactive<FormShape>({
 	title: "",
@@ -88,6 +93,11 @@ watch(
 	(values) => {
 		hydrateForm(values);
 		slugTouched.value = Boolean(values?.slug);
+		if (coverPreviewUrl.value) {
+			URL.revokeObjectURL(coverPreviewUrl.value);
+			coverPreviewUrl.value = "";
+		}
+		coverFile.value = null;
 	},
 	{ immediate: true },
 );
@@ -103,10 +113,52 @@ onMounted(async () => {
 	[categories.value, tags.value] = await Promise.all([listCategories(), listTags()]);
 });
 
+onUnmounted(() => {
+	if (coverPreviewUrl.value) URL.revokeObjectURL(coverPreviewUrl.value);
+});
+
+const activeCoverPreview = computed(() => coverPreviewUrl.value || form.coverImage);
+
 function toggleTag(tagId: string) {
 	form.tagIds = form.tagIds.includes(tagId)
 		? form.tagIds.filter((value) => value !== tagId)
 		: [...form.tagIds, tagId];
+}
+
+function openCoverPicker() {
+	coverInputRef.value?.click();
+}
+
+function applyCoverFile(file?: File | null) {
+	if (!file) return;
+
+	if (coverPreviewUrl.value) URL.revokeObjectURL(coverPreviewUrl.value);
+	coverFile.value = file;
+	coverPreviewUrl.value = URL.createObjectURL(file);
+}
+
+function onCoverFileChange(event: Event) {
+	const file = (event.target as HTMLInputElement).files?.[0];
+	applyCoverFile(file);
+	(event.target as HTMLInputElement).value = "";
+}
+
+function onCoverDragEnter() {
+	isDraggingCover.value = true;
+}
+
+function onCoverDragLeave(event: DragEvent) {
+	const nextTarget = event.relatedTarget;
+	if (nextTarget instanceof Node && event.currentTarget instanceof Node) {
+		if (event.currentTarget.contains(nextTarget)) return;
+	}
+	isDraggingCover.value = false;
+}
+
+function onCoverDrop(event: DragEvent) {
+	isDraggingCover.value = false;
+	const file = event.dataTransfer?.files?.[0];
+	applyCoverFile(file);
 }
 
 function handleSubmit() {
@@ -122,7 +174,7 @@ function handleSubmit() {
 	if (form.categoryId && form.categoryId !== "__none__") payload.categoryId = form.categoryId;
 	if (form.tagIds.length) payload.tagIds = [...form.tagIds];
 
-	emit("submit", payload);
+	emit("submit", { payload, coverFile: coverFile.value });
 }
 </script>
 
@@ -206,9 +258,55 @@ function handleSubmit() {
         </Select>
       </div>
 
-      <div class="space-y-2">
-        <Label for="cover">Cover image URL</Label>
-        <Input id="cover" v-model="form.coverImage" placeholder="https://..." />
+      <div class="space-y-2 md:col-span-3">
+        <Label>Cover image</Label>
+        <input
+          ref="coverInputRef"
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          class="hidden"
+          @change="onCoverFileChange"
+        />
+
+        <button
+          type="button"
+          class="block w-full rounded-xl border border-dashed p-4 text-left transition-colors"
+          :class="
+            isDraggingCover
+              ? 'border-primary bg-primary/5'
+              : 'border-border bg-muted/30 hover:border-primary/40 hover:bg-muted/50'
+          "
+          @click="openCoverPicker"
+          @dragenter.prevent="onCoverDragEnter"
+          @dragover.prevent="isDraggingCover = true"
+          @dragleave.prevent="onCoverDragLeave"
+          @drop.prevent="onCoverDrop"
+        >
+          <div
+            v-if="activeCoverPreview"
+            class="overflow-hidden rounded-lg border border-border bg-card"
+          >
+            <img
+              :src="activeCoverPreview"
+              alt="Cover preview"
+              class="h-44 w-full object-cover"
+            />
+          </div>
+          <div
+            v-else
+            class="flex h-44 items-center justify-center rounded-lg border border-border bg-background text-sm text-muted-foreground"
+          >
+            No cover image selected
+          </div>
+
+          <p class="mt-3 text-xs text-muted-foreground">
+            {{
+              coverFile
+                ? `${coverFile.name} will be uploaded when you submit.`
+                : "Click or drag and drop a jpeg, png, webp, or gif file here. The image is sent to S3 only on submit."
+            }}
+          </p>
+        </button>
       </div>
     </div>
 

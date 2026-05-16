@@ -6,7 +6,7 @@ import type {
 import type { Handler } from "@app/shared/types";
 import { eq } from "drizzle-orm";
 import { getDb } from "@/db";
-import { profiles, refreshTokens } from "@/db/schema";
+import { profiles, refreshTokens, users } from "@/db/schema";
 import {
 	REFRESH_TTL,
 	signAccessToken,
@@ -21,43 +21,57 @@ export const register: Handler = async (req) => {
 	const { firstName, lastName, email, password } = getBody<RegisterInput>(req);
 
 	const [existing] = await db
-		.select({ id: profiles.id })
-		.from(profiles)
-		.where(eq(profiles.email, email));
+		.select({ id: users.id })
+		.from(users)
+		.where(eq(users.email, email));
 	if (existing) return errRes(409, "Email already in use");
 
 	const passwordHash = await Bun.password.hash(password);
-	const [profile] = await db
-		.insert(profiles)
-		.values({ email, passwordHash, firstName, lastName })
-		.returning();
+
+	let profile: typeof profiles.$inferSelect | undefined;
+	await db.transaction(async (tx) => {
+		const [user] = await tx
+			.insert(users)
+			.values({ email, passwordHash })
+			.returning({ id: users.id });
+		if (!user) return;
+		const [p] = await tx
+			.insert(profiles)
+			.values({ userId: user.id, firstName, lastName })
+			.returning();
+		profile = p;
+	});
 
 	if (!profile) return errRes(500, "Failed to create profile");
-	const { id: _, passwordHash: __, ...safe } = profile;
-	return Response.json(safe, { status: 201 });
+	const { id: _, userId: __, ...safeProfile } = profile;
+	return Response.json({ ...safeProfile, email }, { status: 201 });
 };
 
 export const login: Handler = async (req) => {
 	const db = getDb();
 	const { email, password } = getBody<LoginInput>(req);
 
-	const [profile] = await db
+	const [user] = await db
 		.select()
-		.from(profiles)
-		.where(eq(profiles.email, email));
-	if (!profile) return errRes(401, "Invalid credentials");
+		.from(users)
+		.where(eq(users.email, email));
+	if (!user) return errRes(401, "Invalid credentials");
 
-	const valid = await Bun.password.verify(password, profile.passwordHash);
+	const valid = await Bun.password.verify(password, user.passwordHash);
 	if (!valid) return errRes(401, "Invalid credentials");
+
+	const [profile] = await db
+		.select({ id: profiles.id })
+		.from(profiles)
+		.where(eq(profiles.userId, user.id));
+	if (!profile) return errRes(401, "Invalid credentials");
 
 	const jti = crypto.randomUUID();
 	const expiresAt = new Date(Date.now() + REFRESH_TTL * 1000);
-	await db
-		.insert(refreshTokens)
-		.values({ id: jti, profileId: profile.id, expiresAt });
+	await db.insert(refreshTokens).values({ jti, profileId: profile.id, expiresAt });
 
-	const accessToken = await signAccessToken(profile.id, profile.email);
-	const refreshToken = await signRefreshToken(profile.id, jti);
+	const accessToken = await signAccessToken(String(profile.id), user.email);
+	const refreshToken = await signRefreshToken(String(profile.id), jti);
 	return Response.json({ accessToken, refreshToken });
 };
 
@@ -70,7 +84,7 @@ export const logout: Handler = async (req) => {
 		if (payload.type === "access" && payload.sub) {
 			await db
 				.delete(refreshTokens)
-				.where(eq(refreshTokens.profileId, String(payload.sub)));
+				.where(eq(refreshTokens.profileId, Number(payload.sub)));
 		}
 	} catch {
 		// token already invalid, nothing to revoke
@@ -94,27 +108,28 @@ export const refresh: Handler = async (req) => {
 	}
 
 	const jti = String(payload.jti);
-	const profileId = String(payload.sub);
 
 	const [stored] = await db
 		.select()
 		.from(refreshTokens)
-		.where(eq(refreshTokens.id, jti));
+		.where(eq(refreshTokens.jti, jti));
 	if (!stored) return errRes(401, "Invalid or expired refresh token");
 
 	// rotate: delete old, issue new
-	await db.delete(refreshTokens).where(eq(refreshTokens.id, jti));
+	await db.delete(refreshTokens).where(eq(refreshTokens.jti, jti));
 
 	const newJti = crypto.randomUUID();
 	const expiresAt = new Date(Date.now() + REFRESH_TTL * 1000);
-	await db.insert(refreshTokens).values({ id: newJti, profileId, expiresAt });
+	await db.insert(refreshTokens).values({ jti: newJti, profileId: stored.profileId, expiresAt });
 
-	const [profile] = await db
-		.select()
-		.from(profiles)
-		.where(eq(profiles.id, profileId));
-	const newAccess = await signAccessToken(profileId, profile?.email ?? "");
-	const newRefresh = await signRefreshToken(profileId, newJti);
+	const [userRow] = await db
+		.select({ email: users.email })
+		.from(users)
+		.innerJoin(profiles, eq(profiles.userId, users.id))
+		.where(eq(profiles.id, stored.profileId));
+
+	const newAccess = await signAccessToken(String(stored.profileId), userRow?.email ?? "");
+	const newRefresh = await signRefreshToken(String(stored.profileId), newJti);
 
 	return Response.json({ accessToken: newAccess, refreshToken: newRefresh });
 };

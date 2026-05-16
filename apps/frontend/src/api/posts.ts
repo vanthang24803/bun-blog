@@ -1,4 +1,4 @@
-import { apiFetch } from "@/lib/api";
+import { apiFetch, apiFetchForm } from "@/lib/api";
 import type {
 	CreatePostInput,
 	ListPostsParams,
@@ -34,8 +34,14 @@ export function createPost(body: CreatePostInput) {
 	});
 }
 
-export function updatePost(slug: string, body: UpdatePostInput) {
-	return apiFetch<PostSummary>(`/posts/${slug}`, {
+export function uploadPostCover(file: File) {
+	const formData = new FormData();
+	formData.append("cover", file);
+	return apiFetchForm<{ url: string }>("/posts/upload-cover", formData);
+}
+
+export function updatePost(publicId: string, body: UpdatePostInput) {
+	return apiFetch<PostSummary>(`/me/posts/${publicId}`, {
 		method: "PATCH",
 		body: JSON.stringify(body),
 	});

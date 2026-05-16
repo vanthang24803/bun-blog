@@ -91,7 +91,7 @@ export const reactToComment: Handler = async (req) => {
 	const [comment] = await db
 		.select({ id: comments.id })
 		.from(comments)
-		.where(eq(comments.id, commentId));
+		.where(eq(comments.id, Number(commentId)));
 	if (!comment) return errRes(404, "Comment not found");
 
 	const { type } = getBody<CreateReactionInput>(req);
@@ -131,7 +131,7 @@ export const removeCommentReaction: Handler = async (req) => {
 	const [comment] = await db
 		.select({ id: comments.id })
 		.from(comments)
-		.where(eq(comments.id, commentId));
+		.where(eq(comments.id, Number(commentId)));
 	if (!comment) return errRes(404, "Comment not found");
 
 	await db

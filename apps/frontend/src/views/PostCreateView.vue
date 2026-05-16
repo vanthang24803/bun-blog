@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from "vue-router";
-import type { CreatePostInput } from "@/api/blog.types";
+import type { CreatePostInput, PostSubmitPayload } from "@/api/blog.types";
 import AppNav from "@/components/AppNav.vue";
 import PostForm from "@/components/blog/PostForm.vue";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,8 +9,8 @@ import { usePostsStore } from "@/stores/posts";
 const router = useRouter();
 const postsStore = usePostsStore();
 
-async function handleSubmit(payload: CreatePostInput) {
-	await postsStore.createPost(payload);
+async function handleSubmit({ payload, coverFile }: PostSubmitPayload) {
+	await postsStore.createPost(payload as CreatePostInput, coverFile);
 	router.push("/me/posts");
 }
 </script>

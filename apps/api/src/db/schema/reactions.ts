@@ -1,4 +1,4 @@
-import { pgEnum, pgTable, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import { bigint, bigserial, pgEnum, pgTable, timestamp, unique } from "drizzle-orm/pg-core";
 import { comments } from "./comments";
 import { posts } from "./posts";
 import { profiles } from "./profiles";
@@ -12,13 +12,11 @@ export const reactionTypeEnum = pgEnum("reaction_type", [
 export const postReactions = pgTable(
 	"post_reactions",
 	{
-		id: uuid("id")
-			.primaryKey()
-			.$defaultFn(() => crypto.randomUUID()),
-		postId: uuid("post_id")
+		id: bigserial("id", { mode: "number" }).primaryKey(),
+		postId: bigint("post_id", { mode: "number" })
 			.notNull()
 			.references(() => posts.id, { onDelete: "cascade" }),
-		profileId: uuid("profile_id")
+		profileId: bigint("profile_id", { mode: "number" })
 			.notNull()
 			.references(() => profiles.id, { onDelete: "cascade" }),
 		type: reactionTypeEnum("type").notNull().default("like"),
@@ -32,13 +30,11 @@ export const postReactions = pgTable(
 export const commentReactions = pgTable(
 	"comment_reactions",
 	{
-		id: uuid("id")
-			.primaryKey()
-			.$defaultFn(() => crypto.randomUUID()),
-		commentId: uuid("comment_id")
+		id: bigserial("id", { mode: "number" }).primaryKey(),
+		commentId: bigint("comment_id", { mode: "number" })
 			.notNull()
 			.references(() => comments.id, { onDelete: "cascade" }),
-		profileId: uuid("profile_id")
+		profileId: bigint("profile_id", { mode: "number" })
 			.notNull()
 			.references(() => profiles.id, { onDelete: "cascade" }),
 		type: reactionTypeEnum("type").notNull().default("like"),

@@ -3,11 +3,8 @@ import postgres, { type Sql } from "postgres";
 import config from "@/config";
 import * as schema from "./schema";
 
-// prepare: false is required for Supabase's transaction-mode pooler (port 6543).
-// max: 1 keeps the pool simple for transaction mode and reduces stale connection churn.
 const opts = {
-	prepare: false,
-	max: 1,
+	max: 10,
 	idle_timeout: 30,
 	ssl: "require",
 	connection: {

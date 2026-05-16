@@ -4,7 +4,7 @@ import { errRes } from "@/utils/response";
 
 export const requestUser = new WeakMap<
 	Request,
-	{ userId: string; email: string }
+	{ userId: number; email: string }
 >();
 
 const authMiddleware =
@@ -30,7 +30,7 @@ const authMiddleware =
 		}
 
 		requestUser.set(req, {
-			userId: String(payload.sub),
+			userId: Number(payload.sub),
 			email: String(payload.email ?? ""),
 		});
 
@@ -49,7 +49,7 @@ export const optionalAuthMiddleware =
 				const payload = await verifyToken(token);
 				if (payload.type === "access" && payload.sub) {
 					requestUser.set(req, {
-						userId: String(payload.sub),
+						userId: Number(payload.sub),
 						email: String(payload.email ?? ""),
 					});
 				}

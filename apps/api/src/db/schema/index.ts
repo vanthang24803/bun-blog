@@ -7,3 +7,4 @@ export * from "./profiles";
 export * from "./reactions";
 export * from "./tags";
 export * from "./tokens";
+export * from "./users";

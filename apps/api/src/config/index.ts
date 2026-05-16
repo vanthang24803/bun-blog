@@ -4,14 +4,13 @@ const config = {
 	env: process.env.NODE_ENV ?? "development",
 	databaseUrl: process.env.DATABASE_URL ?? "",
 	version: process.env.API_VERSION ?? "1",
-	supabaseUrl: process.env.SUPABASE_URL ?? "",
-	supabaseKey: process.env.SUPABASE_KEY ?? "",
 	jwtSecret: process.env.JWT_SECRET ?? "",
+	storageBaseUrl: process.env.STORAGE_BASE_URL ?? "",
 	s3: {
 		endpoint: process.env.S3_ENDPOINT ?? "",
 		accessKeyId: process.env.S3_ACCESS_KEY_ID ?? "",
 		secretAccessKey: process.env.S3_SECRET_ACCESS_KEY ?? "",
-		region: process.env.S3_REGION ?? "us-east-1",
+		region: process.env.S3_REGION ?? "auto",
 		bucket: process.env.S3_BUCKET ?? "",
 	},
 	cors: {

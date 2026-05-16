@@ -1,7 +1,21 @@
-import { afterAll, beforeEach, describe, expect, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
+
+// Prevent mock.module leakage from response.middleware.test.ts (Bun canary bug)
+// where the mocked logger crosses worker boundaries and loses its error method.
+mock.module("@/utils/logger", () => ({
+	logger: {
+		trace: () => {},
+		debug: () => {},
+		info: () => {},
+		warn: () => {},
+		error: () => {},
+		fatal: () => {},
+	},
+}));
+
 import config from "@/config";
 import { db } from "@/db";
-import { profiles } from "@/db/schema";
+import { users } from "@/db/schema";
 import router from "@/router/router";
 
 const server = Bun.serve({ port: 0, routes: router as any });
@@ -10,7 +24,7 @@ const base = `http://${server.hostname}:${server.port}/api/v${config.version ?? 
 afterAll(() => server.stop());
 
 beforeEach(async () => {
-	await db.delete(profiles);
+	await db.delete(users);
 });
 
 // ─── helpers ────────────────────────────────────────────────────────────────

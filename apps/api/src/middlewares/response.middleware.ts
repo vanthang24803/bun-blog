@@ -29,8 +29,8 @@ const responseMiddleware =
 			raw = await handler(req);
 		} catch (e) {
 			if (isConnectionError(e)) {
-				await resetDbOnce();
 				try {
+					await resetDbOnce();
 					raw = await handler(req); // retry once with a fresh connection
 				} catch (retryErr) {
 					logger.error({ err: retryErr }, "DB retry failed after resetDb");
@@ -62,7 +62,17 @@ const responseMiddleware =
 			return raw;
 		}
 
-		const body = (await raw.json()) as Record<string, unknown>;
+		let body: Record<string, unknown>;
+		try {
+			body = (await raw.json()) as Record<string, unknown>;
+		} catch (e) {
+			logger.error({ err: e, path }, "Failed to parse handler response as JSON");
+			return Response.json(
+				{ err: 500, message: "Internal server error", metadata: { requestAt, path } },
+				{ status: 500 },
+			);
+		}
+
 		const status = raw.status;
 		const metadata = { requestAt, path };
 

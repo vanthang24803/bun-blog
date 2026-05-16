@@ -1,27 +1,28 @@
+import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { categories, tags } from "./schema";
 
 const DATABASE_URL = process.env.DATABASE_URL ?? "";
 
-const sql = postgres(DATABASE_URL, {
+const client = postgres(DATABASE_URL, {
 	prepare: false,
 	max: 1,
 	ssl: "require",
 	connection: { statement_timeout: 30_000 },
 });
-const db = drizzle(sql);
+const db = drizzle(client);
 
 const CATEGORIES = [
-	{ name: "Travel", slug: "travel", description: "Adventures, destinations, and travel tips from around the world" },
-	{ name: "Work", slug: "work", description: "Productivity, career growth, and workplace insights" },
-	{ name: "Software", slug: "software", description: "Engineering, architecture, and software development" },
-	{ name: "Design", slug: "design", description: "UI/UX, visual design, and creative process" },
-	{ name: "Health", slug: "health", description: "Wellness, fitness, and mental health" },
-	{ name: "Food", slug: "food", description: "Recipes, restaurants, and culinary adventures" },
-	{ name: "Finance", slug: "finance", description: "Personal finance, investing, and money management" },
-	{ name: "Education", slug: "education", description: "Learning, courses, and knowledge sharing" },
-	{ name: "Other", slug: "other", description: "Everything else worth writing about" },
+	{ name: "Travel",    slug: "travel",    icon: "✈️",  description: "Adventures, destinations, and travel tips from around the world" },
+	{ name: "Work",      slug: "work",      icon: "💼",  description: "Productivity, career growth, and workplace insights" },
+	{ name: "Software",  slug: "software",  icon: "💻",  description: "Engineering, architecture, and software development" },
+	{ name: "Design",    slug: "design",    icon: "🎨",  description: "UI/UX, visual design, and creative process" },
+	{ name: "Health",    slug: "health",    icon: "❤️",  description: "Wellness, fitness, and mental health" },
+	{ name: "Food",      slug: "food",      icon: "🍴",  description: "Recipes, restaurants, and culinary adventures" },
+	{ name: "Finance",   slug: "finance",   icon: "💰",  description: "Personal finance, investing, and money management" },
+	{ name: "Education", slug: "education", icon: "📚",  description: "Learning, courses, and knowledge sharing" },
+	{ name: "Other",     slug: "other",     icon: "📦",  description: "Everything else worth writing about" },
 ];
 
 const TAGS = [
@@ -76,7 +77,14 @@ async function seed() {
 	await db
 		.insert(categories)
 		.values(CATEGORIES.map((c) => ({ ...c, updatedAt: now })))
-		.onConflictDoNothing({ target: categories.slug });
+		.onConflictDoUpdate({
+			target: categories.slug,
+			set: {
+				icon: sql`excluded.icon`,
+				description: sql`excluded.description`,
+				updatedAt: now,
+			},
+		});
 	console.log(`  ✓ ${CATEGORIES.length} categories`);
 
 	console.log("Seeding tags...");
@@ -87,7 +95,7 @@ async function seed() {
 	console.log(`  ✓ ${TAGS.length} tags`);
 
 	console.log("\nDone.");
-	await sql.end();
+	await client.end();
 }
 
 seed().catch((err) => {

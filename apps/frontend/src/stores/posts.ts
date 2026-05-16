@@ -12,6 +12,7 @@ import {
 	deletePost,
 	getPost,
 	listPosts,
+	uploadPostCover,
 	updatePost,
 } from "@/api/posts";
 
@@ -79,10 +80,15 @@ export const usePostsStore = defineStore("posts", () => {
 		}
 	}
 
-	async function create(body: CreatePostInput) {
+	async function create(body: CreatePostInput, coverFile?: File | null) {
 		saving.value = true;
 		try {
-			const created = await createPost(body);
+			const nextBody = { ...body };
+			if (coverFile) {
+				const { url } = await uploadPostCover(coverFile);
+				nextBody.coverImage = url;
+			}
+			const created = await createPost(nextBody);
 			myPosts.value = [created, ...myPosts.value];
 			return created;
 		} finally {
@@ -90,10 +96,19 @@ export const usePostsStore = defineStore("posts", () => {
 		}
 	}
 
-	async function update(slug: string, body: UpdatePostInput) {
+	async function update(
+		publicId: string,
+		body: UpdatePostInput,
+		coverFile?: File | null,
+	) {
 		saving.value = true;
 		try {
-			const updated = await updatePost(slug, body);
+			const nextBody = { ...body };
+			if (coverFile) {
+				const { url } = await uploadPostCover(coverFile);
+				nextBody.coverImage = url;
+			}
+			const updated = await updatePost(publicId, nextBody);
 			posts.value = posts.value.map((post) =>
 				post.id === updated.id ? { ...post, ...updated } : post,
 			);

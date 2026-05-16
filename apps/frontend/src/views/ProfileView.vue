@@ -2,8 +2,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import { computed, ref } from "vue";
 import { getMe, type Profile, uploadAvatar } from "@/api/auth";
+import { listPosts } from "@/api/posts";
 import AppNav from "@/components/AppNav.vue";
+import AvatarCropDialog from "@/components/AvatarCropDialog.vue";
 import EditProfileDialog from "@/components/EditProfileDialog.vue";
+import UserAvatar from "@/components/ui/avatar/UserAvatar.vue";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +16,8 @@ import { toast } from "@/components/ui/sonner";
 const queryClient = useQueryClient();
 const avatarInputRef = ref<HTMLInputElement | null>(null);
 const editOpen = ref(false);
+const cropOpen = ref(false);
+const cropFile = ref<File | null>(null);
 
 function onProfileSaved(updated: Profile) {
 	queryClient.setQueryData(["me"], updated);
@@ -26,6 +31,11 @@ const {
 } = useQuery({
 	queryKey: ["me"],
 	queryFn: getMe,
+});
+
+const { data: myPosts, isPending: isPostsPending } = useQuery({
+	queryKey: ["posts", "mine"],
+	queryFn: () => listPosts({ mine: true }),
 });
 
 const { mutate: doUploadAvatar, isPending: isUploadingAvatar } = useMutation({
@@ -46,8 +56,19 @@ function onAvatarClick() {
 function onAvatarFileChange(e: Event) {
 	const file = (e.target as HTMLInputElement).files?.[0];
 	if (!file) return;
-	doUploadAvatar(file);
 	(e.target as HTMLInputElement).value = "";
+	cropFile.value = file;
+	cropOpen.value = true;
+}
+
+function onCropped(blob: Blob) {
+	cropOpen.value = false;
+	doUploadAvatar(new File([blob], "avatar.webp", { type: blob.type }));
+}
+
+function onCropCancel() {
+	cropOpen.value = false;
+	cropFile.value = null;
 }
 
 function getFirstCharacter(value: string | null | undefined) {
@@ -70,6 +91,15 @@ const fullName = computed(() =>
 			profile.value.email
 		: "",
 );
+
+function formatPostDate(dateStr: string | null) {
+	if (!dateStr) return null;
+	return new Date(dateStr).toLocaleDateString("en-US", {
+		year: "numeric",
+		month: "short",
+		day: "numeric",
+	});
+}
 
 const joinedDate = computed(() => {
 	if (!profile.value) return "";
@@ -113,32 +143,31 @@ const joinedDate = computed(() => {
 
               <!-- Avatar (clickable upload) -->
               <div
-                class="relative w-20 h-20 rounded-2xl bg-primary border-4 border-card shadow-sm flex items-center justify-center shrink-0 cursor-pointer group"
+                class="relative border-4 border-card shadow-sm rounded-full shrink-0 cursor-pointer group"
                 :class="{ 'opacity-70': isUploadingAvatar }"
                 @click="onAvatarClick"
               >
-                <img v-if="profile.avatar" :src="profile.avatar" :alt="fullName" class="w-full h-full rounded-xl object-cover" />
-                <span v-else class="text-primary-foreground font-bold text-2xl">{{ initials }}</span>
-
-                <div class="absolute inset-0 rounded-xl bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <svg v-if="!isUploadingAvatar" class="h-5 w-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke-linecap="round" stroke-linejoin="round"/>
-                    <polyline points="17 8 12 3 7 8" stroke-linecap="round" stroke-linejoin="round"/>
-                    <line x1="12" y1="3" x2="12" y2="15" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                  <svg v-else class="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24" fill="none">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                  </svg>
-                  <span class="text-white text-[10px] mt-1 font-medium">
-                    {{ isUploadingAvatar ? 'Uploading…' : 'Change' }}
-                  </span>
-                </div>
+                <UserAvatar size="xl" :src="profile.avatar" :initials="initials" :alt="fullName">
+                  <div class="absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <svg v-if="!isUploadingAvatar" class="h-5 w-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke-linecap="round" stroke-linejoin="round"/>
+                      <polyline points="17 8 12 3 7 8" stroke-linecap="round" stroke-linejoin="round"/>
+                      <line x1="12" y1="3" x2="12" y2="15" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <svg v-else class="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24" fill="none">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                    </svg>
+                    <span class="text-white text-[10px] mt-1 font-medium">
+                      {{ isUploadingAvatar ? 'Uploading…' : 'Change' }}
+                    </span>
+                  </div>
+                </UserAvatar>
 
                 <input
                   ref="avatarInputRef"
                   type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  accept="image/*"
                   class="hidden"
                   @change="onAvatarFileChange"
                 />
@@ -329,6 +358,90 @@ const joinedDate = computed(() => {
           </Card>
         </div>
 
+        <!-- My posts -->
+        <Card>
+          <CardHeader class="pb-3">
+            <div class="flex items-center justify-between">
+              <CardTitle class="text-sm font-medium flex items-center gap-2">
+                <svg class="h-4 w-4 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke-linecap="round" stroke-linejoin="round"/>
+                  <polyline points="14 2 14 8 20 8" stroke-linecap="round" stroke-linejoin="round"/>
+                  <line x1="16" y1="13" x2="8" y2="13" stroke-linecap="round" stroke-linejoin="round"/>
+                  <line x1="16" y1="17" x2="8" y2="17" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                My posts
+                <span v-if="myPosts?.length" class="text-xs text-muted-foreground font-normal">({{ myPosts.length }})</span>
+              </CardTitle>
+              <RouterLink to="/me/posts/new">
+                <Button size="sm" variant="outline" class="text-xs h-7 gap-1">
+                  <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 5v14M5 12h14" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  New post
+                </Button>
+              </RouterLink>
+            </div>
+          </CardHeader>
+          <CardContent class="pt-0">
+
+            <!-- Loading -->
+            <div v-if="isPostsPending" class="flex items-center justify-center py-10 gap-2 text-muted-foreground">
+              <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+              </svg>
+              <span class="text-sm">Loading posts…</span>
+            </div>
+
+            <!-- Empty -->
+            <div v-else-if="!myPosts?.length" class="flex flex-col items-center justify-center py-10 gap-2 text-center">
+              <div class="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                <svg class="h-5 w-5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke-linecap="round" stroke-linejoin="round"/>
+                  <polyline points="14 2 14 8 20 8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <p class="text-sm text-muted-foreground">No posts yet.</p>
+              <RouterLink to="/me/posts/new">
+                <Button size="sm" variant="secondary" class="text-xs mt-1">Write your first post</Button>
+              </RouterLink>
+            </div>
+
+            <!-- List -->
+            <ul v-else class="divide-y divide-border">
+              <li v-for="post in myPosts" :key="post.id" class="py-4 first:pt-0 last:pb-0">
+                <RouterLink :to="`/posts/${post.slug}`" class="group flex items-start gap-3">
+                  <div
+                    v-if="post.coverImage"
+                    class="w-16 h-12 rounded-lg bg-muted shrink-0 overflow-hidden"
+                  >
+                    <img :src="post.coverImage" :alt="post.title" class="w-full h-full object-cover" />
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <p class="text-sm font-semibold group-hover:text-primary transition-colors truncate">{{ post.title }}</p>
+                      <Badge
+                        :variant="post.status === 'published' ? 'default' : 'secondary'"
+                        class="text-[10px] px-1.5 py-0 h-4 shrink-0"
+                      >{{ post.status }}</Badge>
+                    </div>
+                    <p v-if="post.excerpt" class="text-xs text-muted-foreground mt-0.5 line-clamp-1">{{ post.excerpt }}</p>
+                    <p class="text-xs text-muted-foreground mt-1">
+                      {{ post.status === 'published' && post.publishedAt
+                        ? `Published ${formatPostDate(post.publishedAt)}`
+                        : `Created ${formatPostDate(post.createdAt)}` }}
+                    </p>
+                  </div>
+                  <svg class="h-4 w-4 text-muted-foreground shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </RouterLink>
+              </li>
+            </ul>
+
+          </CardContent>
+        </Card>
+
       </template>
     </main>
   </div>
@@ -339,5 +452,12 @@ const joinedDate = computed(() => {
     :profile="profile"
     @close="editOpen = false"
     @saved="onProfileSaved"
+  />
+
+  <AvatarCropDialog
+    :open="cropOpen"
+    :file="cropFile"
+    @cancel="onCropCancel"
+    @cropped="onCropped"
   />
 </template>
