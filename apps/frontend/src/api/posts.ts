@@ -47,8 +47,8 @@ export function updatePost(publicId: string, body: UpdatePostInput) {
 	});
 }
 
-export function deletePost(slug: string) {
-	return apiFetch<void>(`/posts/${slug}`, {
+export function deletePost(publicId: string) {
+	return apiFetch<void>(`/me/posts/${publicId}`, {
 		method: "DELETE",
 	});
 }

@@ -19,19 +19,29 @@ const showReplyForm = ref(false);
 const showReplies = ref(false);
 const isEditing = ref(false);
 
-const isOwner = computed(() => props.currentUserId === String(props.comment.authorId));
+const isOwner = computed(
+	() => props.currentUserId === String(props.comment.authorId),
+);
 const replies = computed(() => commentsStore.replies[props.comment.id] ?? []);
 const repliesLoaded = computed(() =>
-	Object.prototype.hasOwnProperty.call(commentsStore.replies, props.comment.id),
+	Object.hasOwn(commentsStore.replies, props.comment.id),
 );
 
 const authorName = computed(() => {
-	const { authorFirstName: f, authorLastName: l, authorEmail: e } = props.comment;
+	const {
+		authorFirstName: f,
+		authorLastName: l,
+		authorEmail: e,
+	} = props.comment;
 	return `${f ?? ""} ${l ?? ""}`.trim() || e || "Anonymous";
 });
 
 const authorInitials = computed(() => {
-	const { authorFirstName: f, authorLastName: l, authorEmail: e } = props.comment;
+	const {
+		authorFirstName: f,
+		authorLastName: l,
+		authorEmail: e,
+	} = props.comment;
 	if (f || l) return `${f?.[0] ?? ""}${l?.[0] ?? ""}`.toUpperCase();
 	return (e?.[0] ?? "?").toUpperCase();
 });
@@ -46,7 +56,11 @@ const timeLabel = computed(() => {
 	if (hrs < 24) return `${hrs}h ago`;
 	const days = Math.floor(hrs / 24);
 	if (days < 7) return `${days}d ago`;
-	return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+	return date.toLocaleDateString("en-US", {
+		month: "short",
+		day: "numeric",
+		year: "numeric",
+	});
 });
 
 const isDeep = computed(() => (props.depth ?? 0) >= 1);
@@ -65,7 +79,9 @@ async function handleReply(payload: { content: string; parentId?: string }) {
 }
 
 async function handleEdit(payload: { content: string }) {
-	await commentsStore.editComment(props.comment.id, { content: payload.content });
+	await commentsStore.editComment(props.comment.id, {
+		content: payload.content,
+	});
 	isEditing.value = false;
 }
 

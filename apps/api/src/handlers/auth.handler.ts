@@ -1,4 +1,5 @@
 import type {
+	ChangePasswordInput,
 	LoginInput,
 	RefreshInput,
 	RegisterInput,
@@ -13,6 +14,7 @@ import {
 	signRefreshToken,
 	verifyToken,
 } from "@/lib/jwt";
+import { requestUser } from "@/middlewares/auth.middleware";
 import { getBody } from "@/middlewares/validate.middleware";
 import { errRes } from "@/utils/response";
 
@@ -51,10 +53,7 @@ export const login: Handler = async (req) => {
 	const db = getDb();
 	const { email, password } = getBody<LoginInput>(req);
 
-	const [user] = await db
-		.select()
-		.from(users)
-		.where(eq(users.email, email));
+	const [user] = await db.select().from(users).where(eq(users.email, email));
 	if (!user) return errRes(401, "Invalid credentials");
 
 	const valid = await Bun.password.verify(password, user.passwordHash);
@@ -68,7 +67,9 @@ export const login: Handler = async (req) => {
 
 	const jti = crypto.randomUUID();
 	const expiresAt = new Date(Date.now() + REFRESH_TTL * 1000);
-	await db.insert(refreshTokens).values({ jti, profileId: profile.id, expiresAt });
+	await db
+		.insert(refreshTokens)
+		.values({ jti, profileId: profile.id, expiresAt });
 
 	const accessToken = await signAccessToken(String(profile.id), user.email);
 	const refreshToken = await signRefreshToken(String(profile.id), jti);
@@ -120,7 +121,9 @@ export const refresh: Handler = async (req) => {
 
 	const newJti = crypto.randomUUID();
 	const expiresAt = new Date(Date.now() + REFRESH_TTL * 1000);
-	await db.insert(refreshTokens).values({ jti: newJti, profileId: stored.profileId, expiresAt });
+	await db
+		.insert(refreshTokens)
+		.values({ jti: newJti, profileId: stored.profileId, expiresAt });
 
 	const [userRow] = await db
 		.select({ email: users.email })
@@ -128,8 +131,38 @@ export const refresh: Handler = async (req) => {
 		.innerJoin(profiles, eq(profiles.userId, users.id))
 		.where(eq(profiles.id, stored.profileId));
 
-	const newAccess = await signAccessToken(String(stored.profileId), userRow?.email ?? "");
+	const newAccess = await signAccessToken(
+		String(stored.profileId),
+		userRow?.email ?? "",
+	);
 	const newRefresh = await signRefreshToken(String(stored.profileId), newJti);
 
 	return Response.json({ accessToken: newAccess, refreshToken: newRefresh });
+};
+
+export const changePassword: Handler = async (req) => {
+	const db = getDb();
+	const user = requestUser.get(req);
+	if (!user) return errRes(401, "Unauthorized");
+
+	const { oldPassword, newPassword } = getBody<ChangePasswordInput>(req);
+
+	const [account] = await db
+		.select({ id: users.id, passwordHash: users.passwordHash })
+		.from(profiles)
+		.innerJoin(users, eq(users.id, profiles.userId))
+		.where(eq(profiles.id, user.userId));
+	if (!account) return errRes(404, "Account not found");
+
+	const valid = await Bun.password.verify(oldPassword, account.passwordHash);
+	if (!valid) return errRes(401, "Old password is incorrect");
+
+	const passwordHash = await Bun.password.hash(newPassword);
+	await db.update(users).set({ passwordHash }).where(eq(users.id, account.id));
+
+	await db
+		.delete(refreshTokens)
+		.where(eq(refreshTokens.profileId, user.userId));
+
+	return Response.json({ message: "Password changed successfully" });
 };

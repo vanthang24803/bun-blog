@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
+import { usePageTitle } from "@/composables/usePageTitle";
 import { useRoute, useRouter } from "vue-router";
-import AppNav from "@/components/AppNav.vue";
+import AppLayout from "@/components/AppLayout.vue";
 import CommentList from "@/components/blog/CommentList.vue";
 import ReactionBar from "@/components/blog/ReactionBar.vue";
 import TableOfContents from "@/components/blog/TableOfContents.vue";
@@ -10,10 +12,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useToc } from "@/composables/useToc";
+import { useAuthStore } from "@/stores/auth";
 import { useBookmarksStore } from "@/stores/bookmarks";
 import { usePostsStore } from "@/stores/posts";
-import { useAuthStore } from "@/stores/auth";
 
+const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const postsStore = usePostsStore();
@@ -22,6 +25,7 @@ const authStore = useAuthStore();
 
 const slug = computed(() => String(route.params.slug ?? ""));
 const post = computed(() => postsStore.currentPost);
+usePageTitle(() => post.value?.title);
 const contentRef = ref<HTMLElement | null>(null);
 const { headings, activeId, setup: setupToc, scrollTo } = useToc();
 const isBookmarked = computed(
@@ -29,7 +33,9 @@ const isBookmarked = computed(
 );
 const publishedLabel = computed(() =>
 	post.value
-		? new Date(post.value.publishedAt ?? post.value.createdAt).toLocaleDateString("en-US", {
+		? new Date(
+				post.value.publishedAt ?? post.value.createdAt,
+			).toLocaleDateString("en-US", {
 				month: "long",
 				day: "numeric",
 				year: "numeric",
@@ -64,8 +70,7 @@ watch(slug, load);
 </script>
 
 <template>
-  <div class="min-h-screen bg-background">
-    <AppNav />
+  <AppLayout>
 
     <main class="max-w-6xl mx-auto px-4 sm:px-6 py-10">
 
@@ -74,7 +79,7 @@ watch(slug, load);
         <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        Back to blog
+        {{ t('blog.backToBlog') }}
       </RouterLink>
 
       <!-- Loading -->
@@ -83,7 +88,7 @@ watch(slug, load);
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
         </svg>
-        <p class="text-sm text-muted-foreground">Loading post…</p>
+        <p class="text-sm text-muted-foreground">{{ t('blog.loadingPost') }}</p>
       </div>
 
       <template v-else-if="post">
@@ -155,7 +160,7 @@ watch(slug, load);
                     >
                       <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
-                    {{ isBookmarked ? "Saved" : "Save to bookmarks" }}
+                    {{ isBookmarked ? t('blog.saved') : t('blog.saveToBookmarks') }}
                   </Button>
                 </div>
               </CardContent>
@@ -182,12 +187,12 @@ watch(slug, load);
 
       <!-- Not found -->
       <div v-else class="flex flex-col items-center justify-center py-24 gap-3">
-        <p class="text-sm text-muted-foreground">Post not found.</p>
+        <p class="text-sm text-muted-foreground">{{ t('blog.postNotFound') }}</p>
         <RouterLink to="/blog">
-          <Button variant="outline" size="sm">Back to blog</Button>
+          <Button variant="outline" size="sm">{{ t('blog.backToBlog') }}</Button>
         </RouterLink>
       </div>
 
     </main>
-  </div>
+  </AppLayout>
 </template>

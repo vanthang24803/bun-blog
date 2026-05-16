@@ -19,8 +19,8 @@ import {
 	getPost,
 	listMyBookmarks,
 	listPosts,
-	uploadPostCover,
 	updatePost,
+	uploadPostCover,
 } from "@/handlers/posts.handler";
 import {
 	reactToComment,
@@ -28,7 +28,9 @@ import {
 	removeCommentReaction,
 	removePostReaction,
 } from "@/handlers/reactions.handler";
-import authMiddleware, { optionalAuthMiddleware } from "@/middlewares/auth.middleware";
+import authMiddleware, {
+	optionalAuthMiddleware,
+} from "@/middlewares/auth.middleware";
 import loggerMiddleware from "@/middlewares/logger.middleware";
 import { validate } from "@/middlewares/validate.middleware";
 import { compose } from "@/utils/compose";
@@ -48,10 +50,10 @@ export const postsRouter = {
 	},
 	"/posts/:slug": {
 		GET: compose(getPost, optionalAuthedMw),
-		DELETE: compose(deletePost, authedMw),
 	},
 	"/me/posts/:publicId": {
 		PATCH: compose(updatePost, [...authedMw, validate(updatePostSchema)]),
+		DELETE: compose(deletePost, authedMw),
 	},
 
 	// comments

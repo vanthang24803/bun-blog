@@ -1,13 +1,21 @@
+import { ALLOWED_TYPES, MAX_SIZE } from "@app/shared/constants";
 import type {
 	CreatePostInput,
 	UpdatePostInput,
 } from "@app/shared/schemas/blog.schema";
 import type { Handler } from "@app/shared/types";
-import { ALLOWED_TYPES, MAX_SIZE } from "@app/shared/constants";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import config from "@/config";
 import { getDb } from "@/db";
-import { bookmarks, postReactions, posts, postTags, tags } from "@/db/schema";
+import {
+	bookmarks,
+	comments,
+	postReactions,
+	posts,
+	postTags,
+	profiles,
+	tags,
+} from "@/db/schema";
 import { s3 } from "@/lib/s3";
 import { requestUser } from "@/middlewares/auth.middleware";
 import { getBody } from "@/middlewares/validate.middleware";
@@ -64,28 +72,51 @@ export const listPosts: Handler = async (req) => {
 		conditions.push(eq(posts.status, "published"));
 	}
 	if (categoryId) conditions.push(eq(posts.categoryId, Number(categoryId)));
-
-	let query = db
-		.select()
-		.from(posts)
-		.where(and(...conditions))
-		.limit(limit)
-		.offset(Math.max(offset, 0));
-
 	if (tagId) {
 		const postIdsWithTag = db
 			.select({ postId: postTags.postId })
 			.from(postTags)
 			.where(eq(postTags.tagId, Number(tagId)));
-		query = db
-			.select()
-			.from(posts)
-			.where(and(...conditions, inArray(posts.id, postIdsWithTag)))
-			.limit(limit)
-			.offset(Math.max(offset, 0));
+		conditions.push(inArray(posts.id, postIdsWithTag));
 	}
 
-	const rows = await query;
+	const rows = await db
+		.select({
+			id: posts.id,
+			publicId: posts.publicId,
+			authorId: posts.authorId,
+			categoryId: posts.categoryId,
+			title: posts.title,
+			slug: posts.slug,
+			content: posts.content,
+			excerpt: posts.excerpt,
+			coverImage: posts.coverImage,
+			status: posts.status,
+			publishedAt: posts.publishedAt,
+			createdAt: posts.createdAt,
+			updatedAt: posts.updatedAt,
+			authorFirstName: profiles.firstName,
+			authorLastName: profiles.lastName,
+			authorAvatar: profiles.avatar,
+			commentCount: sql<number>`cast(count(distinct ${comments.id}) as integer)`,
+			tags: sql<{ id: string; name: string; slug: string }[]>`
+				coalesce(
+					json_agg(distinct jsonb_build_object('id', ${tags.id}::text, 'name', ${tags.name}, 'slug', ${tags.slug}))
+					filter (where ${tags.id} is not null),
+					'[]'::json
+				)
+			`,
+		})
+		.from(posts)
+		.leftJoin(profiles, eq(profiles.id, posts.authorId))
+		.leftJoin(comments, eq(comments.postId, posts.id))
+		.leftJoin(postTags, eq(postTags.postId, posts.id))
+		.leftJoin(tags, eq(tags.id, postTags.tagId))
+		.where(and(...conditions))
+		.groupBy(posts.id, profiles.id)
+		.limit(limit)
+		.offset(Math.max(offset, 0));
+
 	return Response.json(rows);
 };
 
@@ -94,27 +125,48 @@ export const getPost: Handler = async (req) => {
 	const slug = new URL(req.url).pathname.split("/").pop() ?? "";
 	const user = requestUser.get(req);
 
-	const [post] = await db.select().from(posts).where(eq(posts.slug, slug));
+	const [post] = await db
+		.select({
+			id: posts.id,
+			publicId: posts.publicId,
+			authorId: posts.authorId,
+			categoryId: posts.categoryId,
+			title: posts.title,
+			slug: posts.slug,
+			content: posts.content,
+			excerpt: posts.excerpt,
+			coverImage: posts.coverImage,
+			status: posts.status,
+			publishedAt: posts.publishedAt,
+			createdAt: posts.createdAt,
+			updatedAt: posts.updatedAt,
+			authorFirstName: profiles.firstName,
+			authorLastName: profiles.lastName,
+			authorAvatar: profiles.avatar,
+			commentCount: sql<number>`cast(count(distinct ${comments.id}) as integer)`,
+			reactionCount: sql<number>`cast(count(distinct ${postReactions.id}) as integer)`,
+			tags: sql<{ id: string; name: string; slug: string }[]>`
+				coalesce(
+					json_agg(distinct jsonb_build_object('id', ${tags.id}::text, 'name', ${tags.name}, 'slug', ${tags.slug}))
+					filter (where ${tags.id} is not null),
+					'[]'::json
+				)
+			`,
+		})
+		.from(posts)
+		.leftJoin(profiles, eq(profiles.id, posts.authorId))
+		.leftJoin(comments, eq(comments.postId, posts.id))
+		.leftJoin(postReactions, eq(postReactions.postId, posts.id))
+		.leftJoin(postTags, eq(postTags.postId, posts.id))
+		.leftJoin(tags, eq(tags.id, postTags.tagId))
+		.where(eq(posts.slug, slug))
+		.groupBy(posts.id, profiles.id);
+
 	if (!post || post.status !== "published")
 		if (!post || post.authorId !== user?.userId)
 			return errRes(404, "Post not found");
 
-	const postTagRows = await db
-		.select({ tag: tags })
-		.from(postTags)
-		.innerJoin(tags, eq(postTags.tagId, tags.id))
-		.where(eq(postTags.postId, post.id));
-
-	const reactionCount = await db
-		.select({ count: sql<number>`count(*)::int` })
-		.from(postReactions)
-		.where(eq(postReactions.postId, post.id));
-
-	return Response.json({
-		...post,
-		tags: postTagRows.map((r) => r.tag),
-		reactionCount: reactionCount[0]?.count ?? 0,
-	});
+	return Response.json(post);
 };
 
 export const createPost: Handler = async (req) => {
@@ -232,8 +284,13 @@ export const deletePost: Handler = async (req) => {
 	const user = requestUser.get(req);
 	if (!user) return errRes(401, "Unauthorized");
 
-	const slug = new URL(req.url).pathname.split("/").pop() ?? "";
-	const [existing] = await db.select().from(posts).where(eq(posts.slug, slug));
+	const publicId = new URL(req.url).pathname.split("/").pop() ?? "";
+	if (!publicId) return errRes(400, "Invalid post public id");
+
+	const [existing] = await db
+		.select()
+		.from(posts)
+		.where(eq(posts.publicId, publicId));
 	if (!existing) return errRes(404, "Post not found");
 	if (existing.authorId !== user.userId) return errRes(403, "Forbidden");
 
@@ -247,10 +304,40 @@ export const listMyBookmarks: Handler = async (req) => {
 	if (!user) return errRes(401, "Unauthorized");
 
 	const rows = await db
-		.select({ post: posts })
+		.select({
+			id: posts.id,
+			publicId: posts.publicId,
+			authorId: posts.authorId,
+			categoryId: posts.categoryId,
+			title: posts.title,
+			slug: posts.slug,
+			content: posts.content,
+			excerpt: posts.excerpt,
+			coverImage: posts.coverImage,
+			status: posts.status,
+			publishedAt: posts.publishedAt,
+			createdAt: posts.createdAt,
+			updatedAt: posts.updatedAt,
+			authorFirstName: profiles.firstName,
+			authorLastName: profiles.lastName,
+			authorAvatar: profiles.avatar,
+			commentCount: sql<number>`cast(count(distinct ${comments.id}) as integer)`,
+			tags: sql<{ id: string; name: string; slug: string }[]>`
+				coalesce(
+					json_agg(distinct jsonb_build_object('id', ${tags.id}::text, 'name', ${tags.name}, 'slug', ${tags.slug}))
+					filter (where ${tags.id} is not null),
+					'[]'::json
+				)
+			`,
+		})
 		.from(bookmarks)
 		.innerJoin(posts, eq(bookmarks.postId, posts.id))
-		.where(eq(bookmarks.profileId, user.userId));
+		.leftJoin(profiles, eq(profiles.id, posts.authorId))
+		.leftJoin(comments, eq(comments.postId, posts.id))
+		.leftJoin(postTags, eq(postTags.postId, posts.id))
+		.leftJoin(tags, eq(tags.id, postTags.tagId))
+		.where(eq(bookmarks.profileId, user.userId))
+		.groupBy(posts.id, profiles.id);
 
-	return Response.json(rows.map((r) => r.post));
+	return Response.json(rows);
 };

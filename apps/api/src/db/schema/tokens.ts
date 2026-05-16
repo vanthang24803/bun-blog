@@ -1,4 +1,10 @@
-import { bigint, bigserial, pgTable, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+	bigint,
+	bigserial,
+	pgTable,
+	timestamp,
+	uuid,
+} from "drizzle-orm/pg-core";
 import { profiles } from "./profiles";
 
 export const refreshTokens = pgTable("refresh_tokens", {

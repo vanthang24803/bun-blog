@@ -46,7 +46,10 @@ describe("posts handler cover upload", () => {
 
 	test("uploads image to s3 and returns public url", async () => {
 		const formData = new FormData();
-		formData.append("cover", new File(["img"], "cover.png", { type: "image/png" }));
+		formData.append(
+			"cover",
+			new File(["img"], "cover.png", { type: "image/png" }),
+		);
 
 		const req = new Request("http://localhost/posts/cover", {
 			method: "POST",

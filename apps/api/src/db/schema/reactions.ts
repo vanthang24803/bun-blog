@@ -1,4 +1,11 @@
-import { bigint, bigserial, pgEnum, pgTable, timestamp, unique } from "drizzle-orm/pg-core";
+import {
+	bigint,
+	bigserial,
+	pgEnum,
+	pgTable,
+	timestamp,
+	unique,
+} from "drizzle-orm/pg-core";
 import { comments } from "./comments";
 import { posts } from "./posts";
 import { profiles } from "./profiles";

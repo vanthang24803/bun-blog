@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { useI18n } from "vue-i18n";
 import { RouterLink, useRouter } from "vue-router";
 import { useMutation, useQuery } from "@tanstack/vue-query";
 import {
@@ -16,13 +17,12 @@ import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/auth";
 import { toast } from "@/components/ui/sonner";
 
+const { t } = useI18n();
 const router = useRouter();
 const authStore = useAuthStore();
 
 const isLoggedIn = computed(() => authStore.isLoggedIn);
-const {
-	data: profile,
-} = useQuery({
+const { data: profile } = useQuery({
 	queryKey: ["me"],
 	queryFn: getMe,
 	enabled: isLoggedIn,
@@ -32,9 +32,10 @@ const avatarLabel = computed(() => {
 	const currentProfile = profile.value;
 	if (!currentProfile) return "U";
 
-	const nameInitials = `${currentProfile.firstName?.[0] ?? ""}${currentProfile.lastName?.[0] ?? ""}`
-		.trim()
-		.toUpperCase();
+	const nameInitials =
+		`${currentProfile.firstName?.[0] ?? ""}${currentProfile.lastName?.[0] ?? ""}`
+			.trim()
+			.toUpperCase();
 
 	return nameInitials || currentProfile.email[0]?.toUpperCase() || "U";
 });
@@ -43,7 +44,7 @@ const { mutate: doLogout, isPending: isLoggingOut } = useMutation({
 	mutationFn: logout,
 	onSettled() {
 		authStore.clear();
-		toast.info("Signed out");
+		toast.info(t("common.signedOut"));
 		router.push("/login");
 	},
 });
@@ -65,7 +66,7 @@ function goToProfile() {
       </RouterLink>
 
       <!-- Nav links -->
-      <nav class="flex items-center gap-1">
+      <nav v-if="isLoggedIn" class="flex items-center gap-1">
         <RouterLink to="/blog" custom v-slot="{ isActive, navigate }">
           <Button
             variant="ghost"
@@ -77,7 +78,7 @@ function goToProfile() {
               <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke-linecap="round" stroke-linejoin="round"/>
               <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            Blog
+            {{ t('nav.blog') }}
           </Button>
         </RouterLink>
 
@@ -95,7 +96,7 @@ function goToProfile() {
                 <line x1="16" y1="13" x2="8" y2="13" stroke-linecap="round" stroke-linejoin="round"/>
                 <line x1="16" y1="17" x2="8" y2="17" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              My Posts
+              {{ t('nav.myPosts') }}
             </Button>
           </RouterLink>
 
@@ -109,7 +110,7 @@ function goToProfile() {
               <svg class="h-4 w-4 mr-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              Bookmarks
+              {{ t('nav.bookmarks') }}
             </Button>
           </RouterLink>
         </template>
@@ -123,7 +124,7 @@ function goToProfile() {
               <button
                 type="button"
                 class="rounded-full transition focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
-                aria-label="Open account menu"
+                :aria-label="t('nav.openAccountMenu')"
               >
                 <UserAvatar size="md" :src="profile?.avatar" :initials="avatarLabel" alt="Profile avatar" />
               </button>
@@ -137,7 +138,7 @@ function goToProfile() {
               >
                 <div class="px-3 py-2">
                   <p class="text-sm font-medium leading-none">
-                    {{ profile ? `${profile.firstName} ${profile.lastName}`.trim() || profile.email : "Account" }}
+                    {{ profile ? `${profile.firstName} ${profile.lastName}`.trim() || profile.email : t('nav.profile') }}
                   </p>
                   <p v-if="profile?.email" class="mt-1 text-xs text-muted-foreground">
                     {{ profile.email }}
@@ -154,7 +155,7 @@ function goToProfile() {
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke-linecap="round" stroke-linejoin="round"/>
                     <circle cx="12" cy="7" r="4" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
-                  Profile
+                  {{ t('nav.profile') }}
                 </DropdownMenuItem>
 
                 <DropdownMenuItem
@@ -167,7 +168,7 @@ function goToProfile() {
                     <polyline points="16 17 21 12 16 7" stroke-linecap="round" stroke-linejoin="round"/>
                     <line x1="21" y1="12" x2="9" y2="12" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
-                  {{ isLoggingOut ? "Signing out..." : "Sign out" }}
+                  {{ isLoggingOut ? t('nav.signingOut') : t('nav.signOut') }}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenuPortal>
@@ -175,13 +176,14 @@ function goToProfile() {
         </template>
         <template v-else>
           <RouterLink to="/login">
-            <Button variant="ghost" size="sm">Sign in</Button>
+            <Button variant="ghost" size="sm">{{ t('nav.signIn') }}</Button>
           </RouterLink>
           <RouterLink to="/register">
-            <Button size="sm">Sign up</Button>
+            <Button size="sm">{{ t('nav.signUp') }}</Button>
           </RouterLink>
         </template>
       </div>
     </div>
   </header>
+
 </template>

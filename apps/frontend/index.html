@@ -4,10 +4,42 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Application</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <title>Blog</title>
+  <!-- Apply persisted UI settings before first paint to prevent flash -->
+  <script>
+    (() => {
+      var ACCENT = {
+        blue:   { light: 'oklch(0.48 0.2 250)',  dark: 'oklch(0.72 0.2 250)',  ring: 'oklch(0.58 0.18 250)' },
+        green:  { light: 'oklch(0.48 0.18 145)', dark: 'oklch(0.72 0.18 145)', ring: 'oklch(0.58 0.16 145)' },
+        purple: { light: 'oklch(0.48 0.22 300)', dark: 'oklch(0.72 0.22 300)', ring: 'oklch(0.58 0.2 300)'  },
+        orange: { light: 'oklch(0.58 0.2 55)',   dark: 'oklch(0.75 0.2 55)',   ring: 'oklch(0.62 0.18 55)'  },
+        red:    { light: 'oklch(0.48 0.22 20)',  dark: 'oklch(0.68 0.22 20)',  ring: 'oklch(0.56 0.2 20)'   },
+        pink:   { light: 'oklch(0.52 0.22 335)', dark: 'oklch(0.72 0.22 335)', ring: 'oklch(0.6 0.2 335)'   },
+      };
+      var FONTS = {
+        'be-vietnam-pro': "'Be Vietnam Pro', system-ui",
+        'itim':           "'Itim', system-ui",
+        'nunito':         "'Nunito', system-ui",
+        'os':             'system-ui, sans-serif',
+      };
+      try {
+        var s = JSON.parse(localStorage.getItem('ui-settings') || '{}');
+        var root = document.documentElement;
+        if (s.darkMode) root.classList.add('dark');
+        var preset = ACCENT[s.accentColor] || ACCENT.blue;
+        var isDark = !!s.darkMode;
+        root.style.setProperty('--primary', isDark ? preset.dark : preset.light);
+        root.style.setProperty('--primary-foreground', isDark ? 'oklch(0.1 0 0)' : 'oklch(0.985 0 0)');
+        root.style.setProperty('--ring', preset.ring);
+        var font = FONTS[s.uiFont] || FONTS['be-vietnam-pro'];
+        document.documentElement.style.setProperty('--font-ui', font);
+      } catch (e) {}
+    })();
+  </script>
 </head>
 
-<body>
+<body class="bg-background text-foreground">
   <div id="app"></div>
   <script type="module" src="/src/main.ts"></script>
 </body>

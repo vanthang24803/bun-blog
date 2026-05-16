@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useMutation } from "@tanstack/vue-query";
 import { ref } from "vue";
+import { useI18n } from "vue-i18n";
+import { usePageTitle } from "@/composables/usePageTitle";
 import { useRouter } from "vue-router";
 import { login } from "@/api/auth";
 import { Button } from "@/components/ui/button";
@@ -18,6 +20,8 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/sonner";
 import { useAuthStore } from "@/stores/auth";
 
+const { t } = useI18n();
+usePageTitle(() => t("pageTitle.login"));
 const router = useRouter();
 const authStore = useAuthStore();
 const form = ref({ email: "", password: "" });
@@ -26,11 +30,11 @@ const { mutate, isPending } = useMutation({
 	mutationFn: login,
 	onSuccess(tokens) {
 		authStore.setTokens(tokens);
-		toast.success("Signed in successfully", { description: "Welcome back!" });
+		toast.success(t("auth.signedInSuccess"), { description: t("auth.welcomeBackDesc") });
 		router.push("/me");
 	},
 	onError(err) {
-		toast.error("Sign in failed", { description: err.message });
+		toast.error(t("auth.signInFailed"), { description: err.message });
 	},
 });
 
@@ -47,20 +51,20 @@ function onSubmit() {
         <div class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-primary mb-2">
           <span class="text-primary-foreground font-bold text-lg">M</span>
         </div>
-        <h1 class="text-2xl font-bold tracking-tight">Welcome back</h1>
-        <p class="text-sm text-muted-foreground">Sign in to your account</p>
+        <h1 class="text-2xl font-bold tracking-tight">{{ t('auth.welcomeBack') }}</h1>
+        <p class="text-sm text-muted-foreground">{{ t('auth.signInToAccount') }}</p>
       </div>
 
       <Card>
         <CardHeader class="pb-4">
-          <CardTitle class="text-base">Sign in</CardTitle>
-          <CardDescription>Enter your credentials below</CardDescription>
+          <CardTitle class="text-base">{{ t('auth.signIn') }}</CardTitle>
+          <CardDescription>{{ t('auth.enterCredentials') }}</CardDescription>
         </CardHeader>
 
         <CardContent>
           <form class="space-y-4" @submit.prevent="onSubmit">
             <div class="space-y-1.5">
-              <Label for="email">Email</Label>
+              <Label for="email">{{ t('auth.email') }}</Label>
               <Input
                 id="email"
                 v-model="form.email"
@@ -73,9 +77,9 @@ function onSubmit() {
 
             <div class="space-y-1.5">
               <div class="flex items-center justify-between">
-                <Label for="password">Password</Label>
+                <Label for="password">{{ t('auth.password') }}</Label>
                 <a href="#" class="text-xs text-muted-foreground hover:text-foreground transition-colors">
-                  Forgot password?
+                  {{ t('auth.forgotPassword') }}
                 </a>
               </div>
               <Input
@@ -94,9 +98,9 @@ function onSubmit() {
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                 </svg>
-                Signing in...
+                {{ t('auth.signingIn') }}
               </span>
-              <span v-else>Sign in</span>
+              <span v-else>{{ t('auth.signIn') }}</span>
             </Button>
           </form>
         </CardContent>
@@ -104,7 +108,7 @@ function onSubmit() {
         <CardFooter class="flex-col gap-4 pt-0">
           <div class="flex items-center gap-3 w-full">
             <Separator class="flex-1" />
-            <span class="text-xs text-muted-foreground">or</span>
+            <span class="text-xs text-muted-foreground">{{ t('auth.or') }}</span>
             <Separator class="flex-1" />
           </div>
           <Button variant="outline" class="w-full" type="button">
@@ -114,18 +118,18 @@ function onSubmit() {
               <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
             </svg>
-            Continue with Google
+            {{ t('auth.continueWithGoogle') }}
           </Button>
         </CardFooter>
       </Card>
 
       <p class="text-center text-sm text-muted-foreground">
-        Don't have an account?
+        {{ t('auth.noAccount') }}
         <button
           class="font-medium text-foreground hover:underline underline-offset-4"
           @click="router.push('/register')"
         >
-          Sign up
+          {{ t('auth.signUpLink') }}
         </button>
       </p>
     </div>

@@ -58,10 +58,14 @@ export interface PostSummary {
 	publishedAt: string | null;
 	createdAt: string;
 	updatedAt: string;
+	authorFirstName: string | null;
+	authorLastName: string | null;
+	authorAvatar: string | null;
+	commentCount: number;
+	tags: Pick<Tag, "id" | "name" | "slug">[];
 }
 
 export interface PostDetail extends PostSummary {
-	tags: Tag[];
 	reactionCount: number;
 }
 

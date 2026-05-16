@@ -1,69 +1,70 @@
 <script setup lang="ts">
-import { useEditor, EditorContent } from "@tiptap/vue-3";
-import StarterKit from "@tiptap/starter-kit";
-import Underline from "@tiptap/extension-underline";
-import TextAlign from "@tiptap/extension-text-align";
 import Placeholder from "@tiptap/extension-placeholder";
+import TextAlign from "@tiptap/extension-text-align";
+import Underline from "@tiptap/extension-underline";
+import StarterKit from "@tiptap/starter-kit";
+import { EditorContent, useEditor } from "@tiptap/vue-3";
 import { watch } from "vue";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
 const props = withDefaults(
-  defineProps<{
-    modelValue?: string;
-    placeholder?: string;
-    disabled?: boolean;
-  }>(),
-  {
-    modelValue: "",
-    placeholder: "Start writing…",
-    disabled: false,
-  },
+	defineProps<{
+		modelValue?: string;
+		placeholder?: string;
+		disabled?: boolean;
+	}>(),
+	{
+		modelValue: "",
+		placeholder: "Start writing…",
+		disabled: false,
+	},
 );
 
 const emit = defineEmits<{
-  "update:modelValue": [value: string];
+	"update:modelValue": [value: string];
 }>();
 
 const editor = useEditor({
-  content: props.modelValue,
-  editable: !props.disabled,
-  extensions: [
-    StarterKit.configure({
-      heading: { levels: [1, 2, 3] },
-    }),
-    Underline,
-    TextAlign.configure({ types: ["heading", "paragraph"] }),
-    Placeholder.configure({ placeholder: props.placeholder }),
-  ],
-  editorProps: {
-    attributes: {
-      class: "min-h-[280px] px-4 py-4 text-sm leading-7 outline-none focus:outline-none prose prose-sm max-w-none",
-    },
-  },
-  onUpdate({ editor }) {
-    const html = editor.getHTML();
-    emit("update:modelValue", html === "<p></p>" ? "" : html);
-  },
+	content: props.modelValue,
+	editable: !props.disabled,
+	extensions: [
+		StarterKit.configure({
+			heading: { levels: [1, 2, 3] },
+		}),
+		Underline,
+		TextAlign.configure({ types: ["heading", "paragraph"] }),
+		Placeholder.configure({ placeholder: props.placeholder }),
+	],
+	editorProps: {
+		attributes: {
+			class:
+				"min-h-[280px] px-4 py-4 text-sm leading-7 outline-none focus:outline-none prose prose-sm max-w-none",
+		},
+	},
+	onUpdate({ editor }) {
+		const html = editor.getHTML();
+		emit("update:modelValue", html === "<p></p>" ? "" : html);
+	},
 });
 
 watch(
-  () => props.modelValue,
-  (value) => {
-    if (!editor.value) return;
-    const current = editor.value.getHTML();
-    const incoming = value ?? "";
-    if (current !== incoming) {
-      editor.value.commands.setContent(incoming, false);
-    }
-  },
+	() => props.modelValue,
+	(value) => {
+		if (!editor.value) return;
+		const current = editor.value.getHTML();
+		const incoming = value ?? "";
+		if (current !== incoming) {
+			editor.value.commands.setContent(incoming, false);
+		}
+	},
 );
 
 watch(
-  () => props.disabled,
-  (value) => {
-    editor.value?.setEditable(!value);
-  },
+	() => props.disabled,
+	(value) => {
+		editor.value?.setEditable(!value);
+	},
 );
 </script>
 

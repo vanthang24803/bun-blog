@@ -1,15 +1,19 @@
 <script setup lang="ts">
 import { computed, onMounted, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
+import { usePageTitle } from "@/composables/usePageTitle";
 import type { PostSubmitPayload, UpdatePostInput } from "@/api/blog.types";
-import AppNav from "@/components/AppNav.vue";
+import AppLayout from "@/components/AppLayout.vue";
 import PostForm from "@/components/blog/PostForm.vue";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePostsStore } from "@/stores/posts";
 
+const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const postsStore = usePostsStore();
+usePageTitle(() => t("pageTitle.editPost"));
 
 const slug = computed(() => String(route.params.slug ?? ""));
 const initialValues = computed(() =>
@@ -40,8 +44,7 @@ watch(slug, load);
 </script>
 
 <template>
-  <div class="min-h-screen bg-background">
-    <AppNav />
+  <AppLayout>
 
     <main class="max-w-4xl mx-auto px-4 sm:px-6 py-10 space-y-8">
 
@@ -82,5 +85,5 @@ watch(slug, load);
       </Card>
 
     </main>
-  </div>
+  </AppLayout>
 </template>

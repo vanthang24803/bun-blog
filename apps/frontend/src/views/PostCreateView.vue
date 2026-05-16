@@ -1,13 +1,17 @@
 <script setup lang="ts">
+import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
+import { usePageTitle } from "@/composables/usePageTitle";
 import type { CreatePostInput, PostSubmitPayload } from "@/api/blog.types";
-import AppNav from "@/components/AppNav.vue";
+import AppLayout from "@/components/AppLayout.vue";
 import PostForm from "@/components/blog/PostForm.vue";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePostsStore } from "@/stores/posts";
 
+const { t } = useI18n();
 const router = useRouter();
 const postsStore = usePostsStore();
+usePageTitle(() => t("pageTitle.newPost"));
 
 async function handleSubmit({ payload, coverFile }: PostSubmitPayload) {
 	await postsStore.createPost(payload as CreatePostInput, coverFile);
@@ -16,8 +20,7 @@ async function handleSubmit({ payload, coverFile }: PostSubmitPayload) {
 </script>
 
 <template>
-  <div class="min-h-screen bg-background">
-    <AppNav />
+  <AppLayout>
 
     <main class="max-w-4xl mx-auto px-4 sm:px-6 py-10 space-y-8">
 
@@ -46,5 +49,5 @@ async function handleSubmit({ payload, coverFile }: PostSubmitPayload) {
       </Card>
 
     </main>
-  </div>
+  </AppLayout>
 </template>

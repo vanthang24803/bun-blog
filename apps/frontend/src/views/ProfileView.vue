@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import { computed, ref } from "vue";
+import { useI18n } from "vue-i18n";
+import { usePageTitle } from "@/composables/usePageTitle";
 import { getMe, type Profile, uploadAvatar } from "@/api/auth";
 import { listPosts } from "@/api/posts";
-import AppNav from "@/components/AppNav.vue";
+import AppLayout from "@/components/AppLayout.vue";
 import AvatarCropDialog from "@/components/AvatarCropDialog.vue";
+import ChangePasswordDialog from "@/components/ChangePasswordDialog.vue";
 import EditProfileDialog from "@/components/EditProfileDialog.vue";
 import UserAvatar from "@/components/ui/avatar/UserAvatar.vue";
 import { Badge } from "@/components/ui/badge";
@@ -13,9 +16,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/sonner";
 
+const { t } = useI18n();
+usePageTitle(() => t("pageTitle.profile"));
 const queryClient = useQueryClient();
 const avatarInputRef = ref<HTMLInputElement | null>(null);
 const editOpen = ref(false);
+const editBioOpen = ref(false);
+const passwordOpen = ref(false);
 const cropOpen = ref(false);
 const cropFile = ref<File | null>(null);
 
@@ -42,10 +49,10 @@ const { mutate: doUploadAvatar, isPending: isUploadingAvatar } = useMutation({
 	mutationFn: uploadAvatar,
 	onSuccess(updated) {
 		queryClient.setQueryData(["me"], updated);
-		toast.success("Avatar updated");
+		toast.success(t("profile.avatarUpdated"));
 	},
 	onError(err) {
-		toast.error("Failed to update avatar", { description: err.message });
+		toast.error(t("profile.avatarUpdateFailed"), { description: err.message });
 	},
 });
 
@@ -112,8 +119,7 @@ const joinedDate = computed(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-background">
-    <AppNav />
+  <AppLayout>
 
     <main class="max-w-4xl mx-auto px-4 sm:px-6 py-10 space-y-8">
 
@@ -123,13 +129,13 @@ const joinedDate = computed(() => {
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
         </svg>
-        <p class="text-sm text-muted-foreground">Loading profile…</p>
+        <p class="text-sm text-muted-foreground">{{ t('profile.loading') }}</p>
       </div>
 
       <!-- Error -->
       <div v-else-if="isError" class="rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-center space-y-2">
-        <p class="text-sm font-medium text-destructive">Failed to load profile</p>
-        <p class="text-xs text-muted-foreground">Please refresh the page or sign in again.</p>
+        <p class="text-sm font-medium text-destructive">{{ t('profile.loadError') }}</p>
+        <p class="text-xs text-muted-foreground">{{ t('profile.loadErrorDesc') }}</p>
       </div>
 
       <!-- Profile -->
@@ -159,7 +165,7 @@ const joinedDate = computed(() => {
                       <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
                     </svg>
                     <span class="text-white text-[10px] mt-1 font-medium">
-                      {{ isUploadingAvatar ? 'Uploading…' : 'Change' }}
+                      {{ isUploadingAvatar ? t('profile.uploading') : t('profile.changeAvatar') }}
                     </span>
                   </div>
                 </UserAvatar>
@@ -179,14 +185,30 @@ const joinedDate = computed(() => {
                     <circle cx="12" cy="12" r="10"/>
                     <path d="M12 8v4l3 3" stroke-linecap="round"/>
                   </svg>
-                  Joined {{ joinedDate }}
+                  {{ t('profile.joined', { date: joinedDate }) }}
                 </Badge>
                 <Button size="sm" variant="outline" class="text-xs h-7" @click="editOpen = true">
                   <svg class="h-3.5 w-3.5 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-linecap="round" stroke-linejoin="round"/>
                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
-                  Edit profile
+                  {{ t('profile.editProfile') }}
+                </Button>
+                <Button size="sm" variant="outline" class="text-xs h-7" @click="editBioOpen = true">
+                  <svg class="h-3.5 w-3.5 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline points="14 2 14 8 20 8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="16" y1="13" x2="8" y2="13" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="13" y1="17" x2="8" y2="17" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  {{ t('profile.editBio') }}
+                </Button>
+                <Button size="sm" variant="secondary" class="text-xs h-7" @click="passwordOpen = true">
+                  <svg class="mr-1 h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect width="18" height="11" x="3" y="11" rx="2" ry="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  {{ t('profile.changePassword') }}
                 </Button>
               </div>
             </div>
@@ -210,8 +232,8 @@ const joinedDate = computed(() => {
                   </svg>
                 </div>
                 <div>
-                  <p class="text-sm font-semibold">New post</p>
-                  <p class="text-xs text-muted-foreground">Write something new</p>
+                  <p class="text-sm font-semibold">{{ t('profile.newPost') }}</p>
+                  <p class="text-xs text-muted-foreground">{{ t('profile.writeNew') }}</p>
                 </div>
               </CardContent>
             </Card>
@@ -228,8 +250,8 @@ const joinedDate = computed(() => {
                   </svg>
                 </div>
                 <div>
-                  <p class="text-sm font-semibold">My posts</p>
-                  <p class="text-xs text-muted-foreground">Manage your writing</p>
+                  <p class="text-sm font-semibold">{{ t('profile.myPosts') }}</p>
+                  <p class="text-xs text-muted-foreground">{{ t('profile.managePosts') }}</p>
                 </div>
               </CardContent>
             </Card>
@@ -244,8 +266,8 @@ const joinedDate = computed(() => {
                   </svg>
                 </div>
                 <div>
-                  <p class="text-sm font-semibold">Bookmarks</p>
-                  <p class="text-xs text-muted-foreground">Saved articles</p>
+                  <p class="text-sm font-semibold">{{ t('profile.bookmarks') }}</p>
+                  <p class="text-xs text-muted-foreground">{{ t('profile.savedArticles') }}</p>
                 </div>
               </CardContent>
             </Card>
@@ -263,7 +285,7 @@ const joinedDate = computed(() => {
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke-linecap="round" stroke-linejoin="round"/>
                   <circle cx="12" cy="7" r="4" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                Contact info
+                {{ t('profile.contactInfo') }}
               </CardTitle>
             </CardHeader>
             <CardContent class="space-y-3">
@@ -275,7 +297,7 @@ const joinedDate = computed(() => {
                   </svg>
                 </div>
                 <div class="min-w-0">
-                  <p class="text-xs text-muted-foreground">Email</p>
+                  <p class="text-xs text-muted-foreground">{{ t('profile.email') }}</p>
                   <p class="text-sm font-medium truncate">{{ profile.email }}</p>
                 </div>
               </div>
@@ -289,7 +311,7 @@ const joinedDate = computed(() => {
                   </svg>
                 </div>
                 <div class="min-w-0">
-                  <p class="text-xs text-muted-foreground">Phone</p>
+                  <p class="text-xs text-muted-foreground">{{ t('profile.phone') }}</p>
                   <p class="text-sm font-medium">{{ profile.phone || "—" }}</p>
                 </div>
               </div>
@@ -304,7 +326,7 @@ const joinedDate = computed(() => {
                   <rect width="18" height="11" x="3" y="11" rx="2" ry="2" stroke-linecap="round" stroke-linejoin="round"/>
                   <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                Account details
+                {{ t('profile.accountDetails') }}
               </CardTitle>
             </CardHeader>
             <CardContent class="space-y-3">
@@ -316,7 +338,7 @@ const joinedDate = computed(() => {
                   </svg>
                 </div>
                 <div class="min-w-0">
-                  <p class="text-xs text-muted-foreground">First name</p>
+                  <p class="text-xs text-muted-foreground">{{ t('profile.firstName') }}</p>
                   <p class="text-sm font-medium">{{ profile.firstName || "—" }}</p>
                 </div>
               </div>
@@ -331,31 +353,13 @@ const joinedDate = computed(() => {
                   </svg>
                 </div>
                 <div class="min-w-0">
-                  <p class="text-xs text-muted-foreground">Last name</p>
+                  <p class="text-xs text-muted-foreground">{{ t('profile.lastName') }}</p>
                   <p class="text-sm font-medium">{{ profile.lastName || "—" }}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <!-- Bio card - full width if bio exists -->
-          <Card v-if="profile.bio" class="sm:col-span-2">
-            <CardHeader class="pb-3">
-              <CardTitle class="text-sm font-medium flex items-center gap-2">
-                <svg class="h-4 w-4 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke-linecap="round" stroke-linejoin="round"/>
-                  <polyline points="14 2 14 8 20 8" stroke-linecap="round" stroke-linejoin="round"/>
-                  <line x1="16" y1="13" x2="8" y2="13" stroke-linecap="round" stroke-linejoin="round"/>
-                  <line x1="16" y1="17" x2="8" y2="17" stroke-linecap="round" stroke-linejoin="round"/>
-                  <polyline points="10 9 9 9 8 9" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                Bio
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p class="text-sm text-foreground/80 leading-relaxed">{{ profile.bio }}</p>
-            </CardContent>
-          </Card>
         </div>
 
         <!-- My posts -->
@@ -369,7 +373,7 @@ const joinedDate = computed(() => {
                   <line x1="16" y1="13" x2="8" y2="13" stroke-linecap="round" stroke-linejoin="round"/>
                   <line x1="16" y1="17" x2="8" y2="17" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                My posts
+                {{ t('profile.myPosts') }}
                 <span v-if="myPosts?.length" class="text-xs text-muted-foreground font-normal">({{ myPosts.length }})</span>
               </CardTitle>
               <RouterLink to="/me/posts/new">
@@ -377,7 +381,7 @@ const joinedDate = computed(() => {
                   <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M12 5v14M5 12h14" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
-                  New post
+                  {{ t('profile.newPost') }}
                 </Button>
               </RouterLink>
             </div>
@@ -390,7 +394,7 @@ const joinedDate = computed(() => {
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
               </svg>
-              <span class="text-sm">Loading posts…</span>
+              <span class="text-sm">{{ t('profile.loadingPosts') }}</span>
             </div>
 
             <!-- Empty -->
@@ -401,16 +405,16 @@ const joinedDate = computed(() => {
                   <polyline points="14 2 14 8 20 8" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
               </div>
-              <p class="text-sm text-muted-foreground">No posts yet.</p>
+              <p class="text-sm text-muted-foreground">{{ t('profile.noPosts') }}</p>
               <RouterLink to="/me/posts/new">
-                <Button size="sm" variant="secondary" class="text-xs mt-1">Write your first post</Button>
+                <Button size="sm" variant="secondary" class="text-xs mt-1">{{ t('profile.writeFirst') }}</Button>
               </RouterLink>
             </div>
 
             <!-- List -->
             <ul v-else class="divide-y divide-border">
               <li v-for="post in myPosts" :key="post.id" class="py-4 first:pt-0 last:pb-0">
-                <RouterLink :to="`/posts/${post.slug}`" class="group flex items-start gap-3">
+                <RouterLink :to="`/blog/${post.slug}`" class="group flex items-start gap-3">
                   <div
                     v-if="post.coverImage"
                     class="w-16 h-12 rounded-lg bg-muted shrink-0 overflow-hidden"
@@ -428,8 +432,8 @@ const joinedDate = computed(() => {
                     <p v-if="post.excerpt" class="text-xs text-muted-foreground mt-0.5 line-clamp-1">{{ post.excerpt }}</p>
                     <p class="text-xs text-muted-foreground mt-1">
                       {{ post.status === 'published' && post.publishedAt
-                        ? `Published ${formatPostDate(post.publishedAt)}`
-                        : `Created ${formatPostDate(post.createdAt)}` }}
+                        ? t('profile.publishedOn', { date: formatPostDate(post.publishedAt) })
+                        : t('profile.createdOn', { date: formatPostDate(post.createdAt) }) }}
                     </p>
                   </div>
                   <svg class="h-4 w-4 text-muted-foreground shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -444,14 +448,29 @@ const joinedDate = computed(() => {
 
       </template>
     </main>
-  </div>
+  </AppLayout>
 
   <EditProfileDialog
     v-if="profile"
     :open="editOpen"
     :profile="profile"
+    mode="profile"
     @close="editOpen = false"
     @saved="onProfileSaved"
+  />
+
+  <EditProfileDialog
+    v-if="profile"
+    :open="editBioOpen"
+    :profile="profile"
+    mode="bio"
+    @close="editBioOpen = false"
+    @saved="onProfileSaved"
+  />
+
+  <ChangePasswordDialog
+    :open="passwordOpen"
+    @close="passwordOpen = false"
   />
 
   <AvatarCropDialog

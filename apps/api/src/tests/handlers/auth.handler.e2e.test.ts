@@ -72,6 +72,24 @@ async function registerAndLogin() {
 	return body.data;
 }
 
+async function doChangePassword(
+	accessToken: string,
+	payload: {
+		oldPassword: string;
+		newPassword: string;
+		confirmNewPassword: string;
+	},
+) {
+	return fetch(`${base}/auth/change-password`, {
+		method: "POST",
+		headers: {
+			Authorization: `Bearer ${accessToken}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify(payload),
+	});
+}
+
 // ─── response shape ──────────────────────────────────────────────────────────
 
 describe("response envelope", () => {
@@ -283,5 +301,75 @@ describe("POST /auth/logout", () => {
 			body: JSON.stringify({ refreshToken }),
 		});
 		expect(res.status).toBe(401);
+	});
+});
+
+// ─── change password ────────────────────────────────────────────────────────
+
+describe("POST /auth/change-password", () => {
+	test("returns 401 when no Authorization header", async () => {
+		const res = await fetch(`${base}/auth/change-password`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				oldPassword: defaultUser.password,
+				newPassword: "new-secret-123",
+				confirmNewPassword: "new-secret-123",
+			}),
+		});
+		expect(res.status).toBe(401);
+	});
+
+	test("returns 400 when confirmNewPassword does not match", async () => {
+		const { accessToken } = await registerAndLogin();
+		const res = await doChangePassword(accessToken, {
+			oldPassword: defaultUser.password,
+			newPassword: "new-secret-123",
+			confirmNewPassword: "mismatch",
+		});
+		expect(res.status).toBe(400);
+	});
+
+	test("returns 401 when old password is incorrect", async () => {
+		const { accessToken } = await registerAndLogin();
+		const res = await doChangePassword(accessToken, {
+			oldPassword: "wrong-secret",
+			newPassword: "new-secret-123",
+			confirmNewPassword: "new-secret-123",
+		});
+		expect(res.status).toBe(401);
+	});
+
+	test("returns 200 and allows login only with the new password", async () => {
+		const { accessToken } = await registerAndLogin();
+		const res = await doChangePassword(accessToken, {
+			oldPassword: defaultUser.password,
+			newPassword: "new-secret-123",
+			confirmNewPassword: "new-secret-123",
+		});
+		expect(res.status).toBe(200);
+
+		const oldLogin = await doLogin(defaultUser.email, defaultUser.password);
+		expect(oldLogin.status).toBe(401);
+
+		const newLogin = await doLogin(defaultUser.email, "new-secret-123");
+		expect(newLogin.status).toBe(200);
+	});
+
+	test("revokes old refresh tokens after password change", async () => {
+		const { accessToken, refreshToken } = await registerAndLogin();
+		const res = await doChangePassword(accessToken, {
+			oldPassword: defaultUser.password,
+			newPassword: "new-secret-123",
+			confirmNewPassword: "new-secret-123",
+		});
+		expect(res.status).toBe(200);
+
+		const refreshRes = await fetch(`${base}/auth/refresh`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ refreshToken }),
+		});
+		expect(refreshRes.status).toBe(401);
 	});
 });

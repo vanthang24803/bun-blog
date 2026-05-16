@@ -1,20 +1,20 @@
 <script setup lang="ts">
 withDefaults(
-  defineProps<{
-    src?: string | null;
-    initials?: string;
-    size?: "xs" | "sm" | "md" | "lg" | "xl";
-    alt?: string;
-  }>(),
-  { size: "md", initials: "?", alt: "Avatar" },
+	defineProps<{
+		src?: string | null;
+		initials?: string;
+		size?: "xs" | "sm" | "md" | "lg" | "xl";
+		alt?: string;
+	}>(),
+	{ size: "md", initials: "?", alt: "Avatar" },
 );
 
 const sizeClass: Record<string, string> = {
-  xs: "w-6 h-6 text-[10px]",
-  sm: "w-8 h-8 text-xs",
-  md: "w-10 h-10 text-sm",
-  lg: "w-16 h-16 text-xl",
-  xl: "w-20 h-20 text-2xl",
+	xs: "w-6 h-6 text-[10px]",
+	sm: "w-8 h-8 text-xs",
+	md: "w-10 h-10 text-sm",
+	lg: "w-16 h-16 text-xl",
+	xl: "w-20 h-20 text-2xl",
 };
 </script>
 

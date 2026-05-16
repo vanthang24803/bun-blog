@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import type { Comment } from "@/api/blog.types";
 import { Button } from "@/components/ui/button";
 
@@ -23,6 +24,7 @@ const emit = defineEmits<{
 	cancelled: [];
 }>();
 
+const { t } = useI18n();
 const content = ref("");
 const focused = ref(false);
 
@@ -52,7 +54,7 @@ function handleSubmit() {
         v-model="content"
         :rows="compact ? 2 : 4"
         class="w-full bg-transparent px-4 py-3 text-sm leading-6 outline-none resize-none rounded-t-xl placeholder:text-muted-foreground"
-        :placeholder="editTarget ? 'Update your comment…' : parentId ? 'Write a reply…' : 'Join the discussion…'"
+        :placeholder="editTarget ? t('comments.editPlaceholder') : parentId ? t('comments.replyPlaceholder') : t('comments.placeholder')"
         @focus="focused = true"
         @blur="focused = false"
       />
@@ -67,7 +69,7 @@ function handleSubmit() {
           size="sm"
           @click="emit('cancelled')"
         >
-          Cancel
+          {{ t('comments.cancel') }}
         </Button>
         <Button type="submit" size="sm" :disabled="loading || !content.trim()">
           <svg
@@ -79,7 +81,7 @@ function handleSubmit() {
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
           </svg>
-          {{ loading ? "Saving…" : editTarget ? "Save" : parentId ? "Reply" : "Post comment" }}
+          {{ loading ? t('comments.saving') : editTarget ? t('comments.save') : parentId ? t('comments.reply') : t('comments.postComment') }}
         </Button>
       </div>
     </div>

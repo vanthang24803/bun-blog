@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import type { Category, Tag } from "@/api/blog.types";
 import { listCategories } from "@/api/categories";
 import { listTags } from "@/api/tags";
-import type { Category, Tag } from "@/api/blog.types";
 import { Button } from "@/components/ui/button";
 import {
 	Select,

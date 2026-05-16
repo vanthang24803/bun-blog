@@ -66,8 +66,21 @@ export interface UpdateProfileBody {
 	phone?: string;
 }
 
+export interface ChangePasswordBody {
+	oldPassword: string;
+	newPassword: string;
+	confirmNewPassword: string;
+}
+
 export function updateMe(body: UpdateProfileBody) {
 	return apiFetch<Profile>("/me/profile/update", {
+		method: "POST",
+		body: JSON.stringify(body),
+	});
+}
+
+export function changePassword(body: ChangePasswordBody) {
+	return apiFetch<{ message: string }>("/auth/change-password", {
 		method: "POST",
 		body: JSON.stringify(body),
 	});

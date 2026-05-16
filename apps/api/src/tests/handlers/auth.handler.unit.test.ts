@@ -42,7 +42,14 @@ mock.module("@/lib/jwt", () => ({
 	}),
 }));
 
-import { login, logout, refresh, register } from "@/handlers/auth.handler";
+import {
+	changePassword,
+	login,
+	logout,
+	refresh,
+	register,
+} from "@/handlers/auth.handler";
+import { requestUser } from "@/middlewares/auth.middleware";
 
 describe("auth handler unit tests", () => {
 	beforeEach(() => {
@@ -180,7 +187,9 @@ describe("auth handler unit tests", () => {
 		// 1. select refresh_tokens by jti
 		currentDb.select.mockReturnValueOnce(currentDb);
 		currentDb.from.mockReturnValueOnce(currentDb);
-		currentDb.where.mockResolvedValueOnce([{ id: 1, jti: "jti-uuid", profileId: 2 }]);
+		currentDb.where.mockResolvedValueOnce([
+			{ id: 1, jti: "jti-uuid", profileId: 2 },
+		]);
 
 		// 2. delete old token by jti
 		currentDb.delete.mockReturnValueOnce(currentDb);
@@ -214,6 +223,74 @@ describe("auth handler unit tests", () => {
 			}),
 		);
 		expect(currentDb.values.mock.calls[0]?.[0]).not.toHaveProperty("id");
+	});
+
+	test("changePassword returns 401 when old password is incorrect", async () => {
+		const passwordHash = await Bun.password.hash("secret");
+
+		currentDb.select.mockReturnValueOnce(currentDb);
+		currentDb.from.mockReturnValueOnce(currentDb);
+		currentDb.innerJoin.mockReturnValueOnce(currentDb);
+		currentDb.where.mockResolvedValueOnce([
+			{ id: 1, email: "test@example.com", passwordHash },
+		]);
+
+		const req = new Request("http://localhost/change-password", {
+			method: "POST",
+		});
+		// @ts-expect-error
+		req._body = {
+			oldPassword: "wrong-secret",
+			newPassword: "new-secret-123",
+			confirmNewPassword: "new-secret-123",
+		};
+		requestUser.set(req, { userId: 2, email: "test@example.com" });
+
+		const res = await changePassword(req);
+		const body = (await res.json()) as any;
+		expect(res.status).toBe(401);
+		expect(body.message).toBe("Old password is incorrect");
+	});
+
+	test("changePassword returns 200 and revokes refresh tokens on success", async () => {
+		const passwordHash = await Bun.password.hash("secret");
+
+		currentDb.select.mockReturnValueOnce(currentDb);
+		currentDb.from.mockReturnValueOnce(currentDb);
+		currentDb.innerJoin.mockReturnValueOnce(currentDb);
+		currentDb.where.mockResolvedValueOnce([
+			{ id: 1, email: "test@example.com", passwordHash },
+		]);
+
+		currentDb.update.mockReturnValueOnce(currentDb);
+		currentDb.set.mockReturnValueOnce(currentDb);
+		currentDb.where.mockResolvedValueOnce([{ id: 1 }]);
+
+		currentDb.delete.mockReturnValueOnce(currentDb);
+		currentDb.where.mockResolvedValueOnce([]);
+
+		const req = new Request("http://localhost/change-password", {
+			method: "POST",
+		});
+		// @ts-expect-error
+		req._body = {
+			oldPassword: "secret",
+			newPassword: "new-secret-123",
+			confirmNewPassword: "new-secret-123",
+		};
+		requestUser.set(req, { userId: 2, email: "test@example.com" });
+
+		const res = await changePassword(req);
+		const body = (await res.json()) as any;
+		expect(res.status).toBe(200);
+		expect(body.message).toBe("Password changed successfully");
+		expect(currentDb.set).toHaveBeenCalledTimes(1);
+		expect(currentDb.set.mock.calls[0]?.[0]).toEqual(
+			expect.objectContaining({
+				passwordHash: expect.any(String),
+			}),
+		);
+		expect(currentDb.delete).toHaveBeenCalledTimes(1);
 	});
 
 	test("login uses the latest db instance on each invocation", async () => {

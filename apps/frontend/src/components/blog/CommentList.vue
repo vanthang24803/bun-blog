@@ -21,7 +21,8 @@ async function loadComments() {
 		currentUserAvatar.value = profile.avatar ?? null;
 		const f = profile.firstName?.[0] ?? "";
 		const l = profile.lastName?.[0] ?? "";
-		currentUserInitials.value = (f + l).toUpperCase() || profile.email[0].toUpperCase();
+		currentUserInitials.value =
+			(f + l).toUpperCase() || profile.email[0].toUpperCase();
 	}
 }
 
@@ -44,8 +45,7 @@ watch(
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div class="space-y-0.5">
-        <p class="text-xs font-medium uppercase tracking-widest text-muted-foreground">Conversation</p>
-        <h2 class="text-xl font-semibold">Comments</h2>
+        <h2 class="text-xl font-semibold">Comments ({{ commentsStore.comments.length }})</h2>
       </div>
       <span
         v-if="commentsStore.comments.length"

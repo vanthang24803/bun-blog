@@ -12,8 +12,8 @@ import {
 	deletePost,
 	getPost,
 	listPosts,
-	uploadPostCover,
 	updatePost,
+	uploadPostCover,
 } from "@/api/posts";
 
 function toRequestOffset(page: number, limit: number) {
@@ -127,13 +127,19 @@ export const usePostsStore = defineStore("posts", () => {
 		}
 	}
 
-	async function remove(slug: string) {
+	async function remove(publicId: string, slug?: string) {
 		saving.value = true;
 		try {
-			await deletePost(slug);
-			posts.value = posts.value.filter((post) => post.slug !== slug);
-			myPosts.value = myPosts.value.filter((post) => post.slug !== slug);
-			if (currentPost.value?.slug === slug) currentPost.value = null;
+			await deletePost(publicId);
+			posts.value = posts.value.filter((post) => post.publicId !== publicId);
+			myPosts.value = myPosts.value.filter(
+				(post) => post.publicId !== publicId,
+			);
+			if (currentPost.value?.publicId === publicId) currentPost.value = null;
+			if (slug) {
+				posts.value = posts.value.filter((post) => post.slug !== slug);
+				myPosts.value = myPosts.value.filter((post) => post.slug !== slug);
+			}
 		} finally {
 			saving.value = false;
 		}

@@ -66,9 +66,16 @@ const responseMiddleware =
 		try {
 			body = (await raw.json()) as Record<string, unknown>;
 		} catch (e) {
-			logger.error({ err: e, path }, "Failed to parse handler response as JSON");
+			logger.error(
+				{ err: e, path },
+				"Failed to parse handler response as JSON",
+			);
 			return Response.json(
-				{ err: 500, message: "Internal server error", metadata: { requestAt, path } },
+				{
+					err: 500,
+					message: "Internal server error",
+					metadata: { requestAt, path },
+				},
 				{ status: 500 },
 			);
 		}

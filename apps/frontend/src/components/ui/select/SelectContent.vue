@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import { SelectContent, SelectPortal, SelectViewport, type SelectContentProps } from "reka-ui";
+import {
+	SelectContent,
+	type SelectContentProps,
+	SelectPortal,
+	SelectViewport,
+} from "reka-ui";
 import { cn } from "@/lib/utils";
 
 const props = defineProps<SelectContentProps & { class?: string }>();

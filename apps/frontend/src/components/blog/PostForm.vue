@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue";
-import { listCategories } from "@/api/categories";
-import { listTags } from "@/api/tags";
 import type {
 	Category,
 	CreatePostInput,
@@ -9,6 +7,9 @@ import type {
 	Tag,
 	UpdatePostInput,
 } from "@/api/blog.types";
+import { listCategories } from "@/api/categories";
+import { listTags } from "@/api/tags";
+import PostFormSkeleton from "@/components/blog/PostFormSkeleton.vue";
 import TagBadge from "@/components/blog/TagBadge.vue";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,7 +36,9 @@ type FormShape = {
 
 const props = withDefaults(
 	defineProps<{
-		initialValues?: Partial<CreatePostInput & UpdatePostInput> & { tagIds?: string[] };
+		initialValues?: Partial<CreatePostInput & UpdatePostInput> & {
+			tagIds?: string[];
+		};
 		loading?: boolean;
 		submitLabel?: string;
 	}>(),
@@ -57,6 +60,7 @@ const coverInputRef = ref<HTMLInputElement | null>(null);
 const coverFile = ref<File | null>(null);
 const coverPreviewUrl = ref("");
 const isDraggingCover = ref(false);
+const isBootstrapping = ref(true);
 
 const form = reactive<FormShape>({
 	title: "",
@@ -69,15 +73,43 @@ const form = reactive<FormShape>({
 	status: "draft",
 });
 
+const VI_MAP: Record<string, string> = {
+	à: "a", á: "a", ả: "a", ã: "a", ạ: "a",
+	ă: "a", ằ: "a", ắ: "a", ẳ: "a", ẵ: "a", ặ: "a",
+	â: "a", ầ: "a", ấ: "a", ẩ: "a", ẫ: "a", ậ: "a",
+	è: "e", é: "e", ẻ: "e", ẽ: "e", ẹ: "e",
+	ê: "e", ề: "e", ế: "e", ể: "e", ễ: "e", ệ: "e",
+	ì: "i", í: "i", ỉ: "i", ĩ: "i", ị: "i",
+	ò: "o", ó: "o", ỏ: "o", õ: "o", ọ: "o",
+	ô: "o", ồ: "o", ố: "o", ổ: "o", ỗ: "o", ộ: "o",
+	ơ: "o", ờ: "o", ớ: "o", ở: "o", ỡ: "o", ợ: "o",
+	ù: "u", ú: "u", ủ: "u", ũ: "u", ụ: "u",
+	ư: "u", ừ: "u", ứ: "u", ử: "u", ữ: "u", ự: "u",
+	ỳ: "y", ý: "y", ỷ: "y", ỹ: "y", ỵ: "y",
+	đ: "d",
+};
+
 function slugify(value: string) {
-	return value
+	const transliterated = value
 		.toLowerCase()
 		.trim()
+		.split("")
+		.map((ch) => VI_MAP[ch] ?? ch)
+		.join("")
+		.normalize("NFD")
+		.replace(/[̀-ͯ]/g, "");
+
+	const slug = transliterated
 		.replace(/[^a-z0-9]+/g, "-")
 		.replace(/^-+|-+$/g, "");
+
+	// If nothing survived (e.g. pure Japanese title), append a short random suffix
+	return slug || `post-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function hydrateForm(values?: Partial<CreatePostInput & UpdatePostInput> & { tagIds?: string[] }) {
+function hydrateForm(
+	values?: Partial<CreatePostInput & UpdatePostInput> & { tagIds?: string[] },
+) {
 	form.title = values?.title ?? "";
 	form.slug = values?.slug ?? "";
 	form.content = values?.content ?? "";
@@ -110,14 +142,23 @@ watch(
 );
 
 onMounted(async () => {
-	[categories.value, tags.value] = await Promise.all([listCategories(), listTags()]);
+	try {
+		[categories.value, tags.value] = await Promise.all([
+			listCategories(),
+			listTags(),
+		]);
+	} finally {
+		isBootstrapping.value = false;
+	}
 });
 
 onUnmounted(() => {
 	if (coverPreviewUrl.value) URL.revokeObjectURL(coverPreviewUrl.value);
 });
 
-const activeCoverPreview = computed(() => coverPreviewUrl.value || form.coverImage);
+const activeCoverPreview = computed(
+	() => coverPreviewUrl.value || form.coverImage,
+);
 
 function toggleTag(tagId: string) {
 	form.tagIds = form.tagIds.includes(tagId)
@@ -171,7 +212,8 @@ function handleSubmit() {
 
 	if (form.excerpt.trim()) payload.excerpt = form.excerpt.trim();
 	if (form.coverImage.trim()) payload.coverImage = form.coverImage.trim();
-	if (form.categoryId && form.categoryId !== "__none__") payload.categoryId = form.categoryId;
+	if (form.categoryId && form.categoryId !== "__none__")
+		payload.categoryId = form.categoryId;
 	if (form.tagIds.length) payload.tagIds = [...form.tagIds];
 
 	emit("submit", { payload, coverFile: coverFile.value });
@@ -179,7 +221,9 @@ function handleSubmit() {
 </script>
 
 <template>
-  <form class="space-y-6" @submit.prevent="handleSubmit">
+  <PostFormSkeleton v-if="isBootstrapping" />
+
+  <form v-else class="space-y-6" @submit.prevent="handleSubmit">
 
     <!-- Title + Slug -->
     <div class="grid gap-5 md:grid-cols-2">
